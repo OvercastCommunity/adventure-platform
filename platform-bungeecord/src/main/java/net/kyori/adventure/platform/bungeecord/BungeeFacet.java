@@ -28,7 +28,8 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArraySet;
-import net.kyori.adventure.audience.MessageType;
+import net.kyori.adventure.chat.ChatType;
+import net.kyori.adventure.chat.SignedMessage;
 import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.permission.PermissionChecker;
 import net.kyori.adventure.platform.facet.Facet;
@@ -57,7 +58,6 @@ import org.jetbrains.annotations.Nullable;
 import static net.kyori.adventure.platform.bungeecord.BungeeReflection.findMethod;
 import static net.kyori.adventure.platform.bungeecord.BungeeReflection.hasMethod;
 import static net.kyori.adventure.platform.facet.Knob.logError;
-import static net.kyori.adventure.platform.facet.Knob.logUnsupported;
 
 class BungeeFacet<V extends CommandSender> extends FacetBase<V> {
   static final BaseComponent[] EMPTY_COMPONENT_ARRAY = new BaseComponent[0];
@@ -105,7 +105,12 @@ class BungeeFacet<V extends CommandSender> extends FacetBase<V> {
     }
 
     @Override
-    public void sendMessage(final @NotNull CommandSender viewer, final @NotNull Identity source, final BaseComponent @NotNull [] message, final @NotNull Object type) {
+    public void sendMessage(final @NotNull CommandSender viewer, final BaseComponent @NotNull [] message) {
+      viewer.sendMessage(message);
+    }
+
+    @Override
+    public void sendMessage(final @NotNull CommandSender viewer, final BaseComponent @NotNull [] message, final ChatType.@NotNull Bound boundChatType) {
       viewer.sendMessage(message);
     }
   }
@@ -146,32 +151,25 @@ class BungeeFacet<V extends CommandSender> extends FacetBase<V> {
     }
 
     @Override
-    public void sendMessage(final @NotNull ProxiedPlayer viewer, final @NotNull Identity source, final BaseComponent @NotNull [] message, final @NotNull Object type) {
-      if (type == MessageType.CHAT) {
-        viewer.sendMessage(source.uuid(), message);
-      } else {
-        super.sendMessage(viewer, source, message, type);
-      }
+    public void sendMessage(final @NotNull ProxiedPlayer viewer, final BaseComponent @NotNull [] message, final ChatType.@NotNull Bound boundChatType) {
+      viewer.sendMessage(Identity.nil().uuid(), message);
+    }
+
+    @Override
+    public void sendMessage(final @NotNull ProxiedPlayer viewer, final BaseComponent @NotNull [] message, final @NotNull SignedMessage signedMessage, final ChatType.@NotNull Bound boundChatType) {
+      viewer.sendMessage(signedMessage.identity().uuid(), message);
     }
   }
 
   static class ChatPlayer extends Message implements Facet.Chat<ProxiedPlayer, BaseComponent[]> {
-    public @Nullable ChatMessageType createType(final @NotNull MessageType type) {
-      if (type == MessageType.CHAT) {
-        return ChatMessageType.CHAT;
-      } else if (type == MessageType.SYSTEM) {
-        return ChatMessageType.SYSTEM;
-      }
-      logUnsupported(this, type);
-      return null;
+    @Override
+    public void sendMessage(final @NotNull ProxiedPlayer viewer, final BaseComponent @NotNull [] message) {
+      viewer.sendMessage(ChatMessageType.SYSTEM, message);
     }
 
     @Override
-    public void sendMessage(final @NotNull ProxiedPlayer viewer, final @NotNull Identity source, final BaseComponent @NotNull [] message, final @NotNull Object type) {
-      final ChatMessageType chat = type instanceof MessageType ? this.createType((MessageType) type) : ChatMessageType.SYSTEM; // if it's not a legacy adventure MessageType it doesn't matter cause its not used
-      if (chat != null) {
-        viewer.sendMessage(chat, message);
-      }
+    public void sendMessage(final @NotNull ProxiedPlayer viewer, final BaseComponent @NotNull [] message, final ChatType.@NotNull Bound boundChatType) {
+      viewer.sendMessage(ChatMessageType.CHAT, message);
     }
   }
 

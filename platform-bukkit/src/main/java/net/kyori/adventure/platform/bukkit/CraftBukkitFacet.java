@@ -52,9 +52,10 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
-import net.kyori.adventure.audience.MessageType;
 import net.kyori.adventure.chat.ChatType;
+import net.kyori.adventure.chat.SignedMessage;
 import net.kyori.adventure.identity.Identity;
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.nbt.BinaryTagIO;
 import net.kyori.adventure.nbt.BinaryTagTypes;
 import net.kyori.adventure.nbt.CompoundBinaryTag;
@@ -310,35 +311,40 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
     }
 
     @Override
-    public void sendMessage(final @NotNull CommandSender viewer, final @NotNull Identity source, final @NotNull Object message, final @NotNull Object type) {
-      if (!(type instanceof ChatType.Bound)) {
-        super.sendMessage(viewer, source, message, type);
-      } else {
-        final ChatType.Bound bound = (ChatType.Bound) type;
-        try {
-          final Object nameComponent = this.createMessage(viewer, bound.name());
-          final Object targetComponent = bound.target() != null ? this.createMessage(viewer, bound.target()) : null;
-          final Object registryAccess = CraftBukkitAccess.Chat1_19_3.ACTUAL_GET_REGISTRY_ACCESS.invoke(CraftBukkitAccess.Chat1_19_3.SERVER_PLAYER_GET_LEVEL.invoke(CRAFT_PLAYER_GET_HANDLE.invoke(viewer)));
-          final Object chatTypeRegistry = ((Optional<?>) CraftBukkitAccess.Chat1_19_3.REGISTRY_ACCESS_GET_REGISTRY_OPTIONAL.invoke(registryAccess, CraftBukkitAccess.Chat1_19_3.CHAT_TYPE_RESOURCE_KEY)).orElseThrow(NoSuchElementException::new);
-          final Object typeResourceLocation = CraftBukkitAccess.NEW_RESOURCE_LOCATION.invoke(bound.type().key().namespace(), bound.type().key().value());
-          final Object boundNetwork;
-          if (CraftBukkitAccess.Chat1_19_3.CHAT_TYPE_BOUND_NETWORK_CONSTRUCTOR != null) {
-            final Object chatTypeObject = ((Optional<?>) CraftBukkitAccess.Chat1_19_3.REGISTRY_GET_OPTIONAL.invoke(chatTypeRegistry, typeResourceLocation)).orElseThrow(NoSuchElementException::new);
-            final int networkId = (int) CraftBukkitAccess.Chat1_19_3.REGISTRY_GET_ID.invoke(chatTypeRegistry, chatTypeObject);
-            if (networkId < 0) {
-              throw new IllegalArgumentException("Could not get a valid network id from " + type);
-            }
-            boundNetwork = CraftBukkitAccess.Chat1_19_3.CHAT_TYPE_BOUND_NETWORK_CONSTRUCTOR.invoke(networkId, nameComponent, targetComponent);
-          } else {
-            final Object chatTypeHolder = ((Optional<?>) CraftBukkitAccess.Chat1_19_3.REGISTRY_GET_HOLDER.invoke(chatTypeRegistry, typeResourceLocation)).orElseThrow(NoSuchElementException::new);
-            boundNetwork = CraftBukkitAccess.Chat1_19_3.CHAT_TYPE_BOUND_CONSTRUCTOR.invoke(chatTypeHolder, nameComponent, Optional.ofNullable(targetComponent));
-          }
-
-          this.sendMessage(viewer, CraftBukkitAccess.Chat1_19_3.DISGUISED_CHAT_PACKET_CONSTRUCTOR.invoke(message, boundNetwork));
-        } catch (final Throwable error) {
-          logError(error, "Failed to send a 1.19.3+ message: %s %s", message, type);
+    public void sendMessage(final @NotNull CommandSender viewer, final @NotNull Object message, final ChatType.@NotNull Bound boundChatType) {
+      try {
+        final Object nameComponent = this.createMessage(viewer, boundChatType.name());
+        final Object targetComponent = boundChatType.target() != null ? this.createMessage(viewer, boundChatType.target()) : null;
+        final Object registryAccess = CraftBukkitAccess.Chat1_19_3.ACTUAL_GET_REGISTRY_ACCESS.invoke(CraftBukkitAccess.Chat1_19_3.SERVER_PLAYER_GET_LEVEL.invoke(CRAFT_PLAYER_GET_HANDLE.invoke(viewer)));
+        final Object chatTypeRegistry = ((Optional<?>) CraftBukkitAccess.Chat1_19_3.REGISTRY_ACCESS_GET_REGISTRY_OPTIONAL.invoke(registryAccess, CraftBukkitAccess.Chat1_19_3.CHAT_TYPE_RESOURCE_KEY)).orElseThrow(NoSuchElementException::new);
+        final Key key = boundChatType.type().key();
+        if (key == null) {
+          super.sendMessage(viewer, message, boundChatType);
+          return;
         }
+        final Object typeResourceLocation = CraftBukkitAccess.NEW_RESOURCE_LOCATION.invoke(key.namespace(), key.value());
+        final Object boundNetwork;
+        if (CraftBukkitAccess.Chat1_19_3.CHAT_TYPE_BOUND_NETWORK_CONSTRUCTOR != null) {
+          final Object chatTypeObject = ((Optional<?>) CraftBukkitAccess.Chat1_19_3.REGISTRY_GET_OPTIONAL.invoke(chatTypeRegistry, typeResourceLocation)).orElseThrow(NoSuchElementException::new);
+          final int networkId = (int) CraftBukkitAccess.Chat1_19_3.REGISTRY_GET_ID.invoke(chatTypeRegistry, chatTypeObject);
+          if (networkId < 0) {
+            throw new IllegalArgumentException("Could not get a valid network id from " + boundChatType);
+          }
+          boundNetwork = CraftBukkitAccess.Chat1_19_3.CHAT_TYPE_BOUND_NETWORK_CONSTRUCTOR.invoke(networkId, nameComponent, targetComponent);
+        } else {
+          final Object chatTypeHolder = ((Optional<?>) CraftBukkitAccess.Chat1_19_3.REGISTRY_GET_HOLDER.invoke(chatTypeRegistry, typeResourceLocation)).orElseThrow(NoSuchElementException::new);
+          boundNetwork = CraftBukkitAccess.Chat1_19_3.CHAT_TYPE_BOUND_CONSTRUCTOR.invoke(chatTypeHolder, nameComponent, Optional.ofNullable(targetComponent));
+        }
+
+        this.sendMessage(viewer, CraftBukkitAccess.Chat1_19_3.DISGUISED_CHAT_PACKET_CONSTRUCTOR.invoke(message, boundNetwork));
+      } catch (final Throwable error) {
+        logError(error, "Failed to send a 1.19.3+ message: %s %s", message, boundChatType);
       }
+    }
+
+    @Override
+    public void sendMessage(final @NotNull CommandSender viewer, final @NotNull Object message, final @NotNull SignedMessage signedMessage, final ChatType.@NotNull Bound boundChatType) {
+      this.sendMessage(viewer, message, boundChatType);
     }
   }
 
@@ -349,10 +355,23 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
     }
 
     @Override
-    public void sendMessage(final @NotNull CommandSender viewer, final @NotNull Identity source, final @NotNull Object message, final @NotNull Object type) {
-      final Object messageType = type == MessageType.CHAT ? MESSAGE_TYPE_CHAT : MESSAGE_TYPE_SYSTEM;
+    public void sendMessage(final @NotNull CommandSender viewer, final @NotNull Object message) {
+      this.sendMessage(viewer, message, MESSAGE_TYPE_SYSTEM, Identity.nil().uuid());
+    }
+
+    @Override
+    public void sendMessage(final @NotNull CommandSender viewer, final @NotNull Object message, final ChatType.@NotNull Bound boundChatType) {
+      this.sendMessage(viewer, message, MESSAGE_TYPE_CHAT, Identity.nil().uuid());
+    }
+
+    @Override
+    public void sendMessage(final @NotNull CommandSender viewer, final @NotNull Object message, final @NotNull SignedMessage signedMessage, final ChatType.@NotNull Bound boundChatType) {
+      this.sendMessage(viewer, message, MESSAGE_TYPE_CHAT, signedMessage.identity().uuid());
+    }
+
+    protected void sendMessage(final @NotNull CommandSender viewer, final @NotNull Object message, final @Nullable Object messageType, final @NotNull UUID source) {
       try {
-        this.sendMessage(viewer, CHAT_PACKET_CONSTRUCTOR.invoke(message, messageType, source.uuid()));
+        this.sendMessage(viewer, CHAT_PACKET_CONSTRUCTOR.invoke(message, messageType, source));
       } catch (final Throwable error) {
         logError(error, "Failed to invoke PacketPlayOutChat constructor: %s %s", message, messageType);
       }
@@ -873,7 +892,7 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
     private static CompoundBinaryTag tagFor(final @NotNull String title, final @NotNull String author, final @NotNull Iterable<Object> pages) {
       final ListBinaryTag.Builder<StringBinaryTag> builder = ListBinaryTag.builder(BinaryTagTypes.STRING);
       for (final Object page : pages) {
-        builder.add(StringBinaryTag.of((String) page));
+        builder.add(StringBinaryTag.stringBinaryTag((String) page));
       }
       return CompoundBinaryTag.builder()
         .putString(BOOK_TITLE, title)

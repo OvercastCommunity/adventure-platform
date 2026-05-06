@@ -31,8 +31,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
-import net.kyori.adventure.audience.MessageType;
-import net.kyori.adventure.identity.Identity;
+import net.kyori.adventure.chat.ChatType;
+import net.kyori.adventure.chat.SignedMessage;
 import net.kyori.adventure.sound.SoundStop;
 import net.kyori.adventure.text.Component;
 import org.jetbrains.annotations.ApiStatus;
@@ -174,44 +174,35 @@ public interface Facet<V> {
    */
   interface Chat<V, M> extends Message<V, M> {
     /**
-     * Sends a chat message.
+     * Sends a system message.
      *
      * @param viewer a viewer
-     * @param source the sender's identity
      * @param message a message
-     * @param type a message type
      * @since 4.0.0
      */
-    void sendMessage(final @NotNull V viewer, final @NotNull Identity source, final @NotNull M message, final @NotNull Object type);
-  }
-
-  /**
-   * A facet that sends chat messages, using packets.
-   *
-   * @param <V> a viewer type
-   * @param <M> a message type
-   * @since 4.0.0
-   */
-  interface ChatPacket<V, M> extends Chat<V, M> {
-    byte TYPE_CHAT = 0;
-    byte TYPE_SYSTEM = 1;
-    byte TYPE_ACTION_BAR = 2;
+    void sendMessage(final @NotNull V viewer, final @NotNull M message);
 
     /**
-     * Creates a message type.
+     * Sends a message with a bound chat type.
      *
-     * @param type a message type
-     * @return an ordinal
+     * @param viewer a viewer
+     * @param message a message
+     * @param boundChatType a bound chat type
      * @since 4.0.0
      */
-    default byte createMessageType(final @NotNull MessageType type) {
-      if (type == MessageType.CHAT) {
-        return TYPE_CHAT;
-      } else if (type == MessageType.SYSTEM) {
-        return TYPE_SYSTEM;
-      }
-      logUnsupported(this, type);
-      return TYPE_CHAT;
+    void sendMessage(final @NotNull V viewer, final @NotNull M message, final ChatType.@NotNull Bound boundChatType);
+
+    /**
+     * Sends a signed message with a bound chat type.
+     *
+     * @param viewer a viewer
+     * @param message a message
+     * @param signedMessage a signed message
+     * @param boundChatType a bound chat type
+     * @since 4.0.0
+     */
+    default void sendMessage(final @NotNull V viewer, final @NotNull M message, final @NotNull SignedMessage signedMessage, final ChatType.@NotNull Bound boundChatType) {
+      this.sendMessage(viewer, message, boundChatType);
     }
   }
 

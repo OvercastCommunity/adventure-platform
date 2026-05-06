@@ -23,8 +23,7 @@
  */
 package net.kyori.adventure.platform.bukkit;
 
-import net.kyori.adventure.audience.MessageType;
-import net.kyori.adventure.identity.Identity;
+import net.kyori.adventure.chat.ChatType;
 import net.kyori.adventure.platform.facet.Facet;
 import net.kyori.adventure.platform.facet.FacetBase;
 import net.kyori.adventure.platform.facet.FacetComponentFlattener;
@@ -49,7 +48,6 @@ import static net.kyori.adventure.platform.bukkit.MinecraftReflection.findClass;
 import static net.kyori.adventure.platform.bukkit.MinecraftReflection.hasClass;
 import static net.kyori.adventure.platform.bukkit.MinecraftReflection.hasMethod;
 import static net.kyori.adventure.platform.facet.Knob.isEnabled;
-import static net.kyori.adventure.platform.facet.Knob.logUnsupported;
 import static net.kyori.adventure.text.serializer.bungeecord.BungeeComponentSerializer.isNative;
 
 class SpigotFacet<V extends CommandSender> extends FacetBase<V> {
@@ -93,7 +91,12 @@ class SpigotFacet<V extends CommandSender> extends FacetBase<V> {
     }
 
     @Override
-    public void sendMessage(final @NotNull CommandSender viewer, final @NotNull Identity source, final BaseComponent @NotNull[] message, final @NotNull Object type) {
+    public void sendMessage(final @NotNull CommandSender viewer, final BaseComponent @NotNull[] message) {
+      viewer.spigot().sendMessage(message);
+    }
+
+    @Override
+    public void sendMessage(final @NotNull CommandSender viewer, final BaseComponent @NotNull[] message, final ChatType.@NotNull Bound boundChatType) {
       viewer.spigot().sendMessage(message);
     }
   }
@@ -111,23 +114,16 @@ class SpigotFacet<V extends CommandSender> extends FacetBase<V> {
       return super.isSupported() && SUPPORTED;
     }
 
-    private @Nullable ChatMessageType createType(final @NotNull MessageType type) {
-      if (type == MessageType.CHAT) {
-        return ChatMessageType.CHAT;
-      } else if (type == MessageType.SYSTEM) {
-        return ChatMessageType.SYSTEM;
-      }
-      logUnsupported(this, type);
-      return null;
+    @Override
+    @SuppressWarnings("deprecation")
+    public void sendMessage(final @NotNull Player viewer, final BaseComponent @NotNull[] message) {
+      viewer.spigot().sendMessage(ChatMessageType.SYSTEM, message);
     }
 
     @Override
     @SuppressWarnings("deprecation")
-    public void sendMessage(final @NotNull Player viewer, final @NotNull Identity source, final BaseComponent @NotNull[] message, final @NotNull Object type) {
-      final ChatMessageType chat = type instanceof MessageType ? this.createType((MessageType) type) : ChatMessageType.SYSTEM; // if it's not a legacy adventure MessageType it doesn't matter cause its not used
-      if (chat != null) {
-        viewer.spigot().sendMessage(chat, message);
-      }
+    public void sendMessage(final @NotNull Player viewer, final BaseComponent @NotNull[] message, final ChatType.@NotNull Bound boundChatType) {
+      viewer.spigot().sendMessage(ChatMessageType.CHAT, message);
     }
   }
 

@@ -30,6 +30,7 @@ import java.util.Collection;
 import java.util.Locale;
 import java.util.Set;
 import java.util.function.Function;
+import net.kyori.adventure.chat.ChatType;
 import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.permission.PermissionChecker;
@@ -83,7 +84,12 @@ class BukkitFacet<V extends CommandSender> extends FacetBase<V> {
     }
 
     @Override
-    public void sendMessage(final @NotNull CommandSender viewer, final @NotNull Identity source, final @NotNull String message, final @NotNull Object type) {
+    public void sendMessage(final @NotNull CommandSender viewer, final @NotNull String message) {
+      viewer.sendMessage(message);
+    }
+
+    @Override
+    public void sendMessage(final @NotNull CommandSender viewer, final @NotNull String message, final ChatType.@NotNull Bound boundChatType) {
       viewer.sendMessage(message);
     }
   }

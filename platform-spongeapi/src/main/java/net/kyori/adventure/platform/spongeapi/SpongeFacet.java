@@ -28,7 +28,7 @@ import com.google.common.collect.Lists;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
-import net.kyori.adventure.audience.MessageType;
+import net.kyori.adventure.chat.ChatType;
 import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.permission.PermissionChecker;
@@ -61,7 +61,6 @@ import org.spongepowered.api.text.BookView;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.channel.ChatTypeMessageReceiver;
 import org.spongepowered.api.text.channel.MessageReceiver;
-import org.spongepowered.api.text.chat.ChatType;
 import org.spongepowered.api.text.chat.ChatTypes;
 import org.spongepowered.api.text.translation.Translation;
 import org.spongepowered.api.util.Identifiable;
@@ -112,7 +111,12 @@ class SpongeFacet<V> extends FacetBase<V> {
     }
 
     @Override
-    public void sendMessage(final @NotNull MessageReceiver viewer, final @NotNull Identity source, final @NotNull Text message, final @NotNull Object type) {
+    public void sendMessage(final @NotNull MessageReceiver viewer, final @NotNull Text message) {
+      viewer.sendMessage(message);
+    }
+
+    @Override
+    public void sendMessage(final @NotNull MessageReceiver viewer, final @NotNull Text message, final ChatType.@NotNull Bound boundChatType) {
       viewer.sendMessage(message);
     }
   }
@@ -122,22 +126,14 @@ class SpongeFacet<V> extends FacetBase<V> {
       super(ChatTypeMessageReceiver.class);
     }
 
-    private @Nullable ChatType type(final @NotNull MessageType type) {
-      if (type == MessageType.CHAT) {
-        return ChatTypes.CHAT;
-      } else if (type == MessageType.SYSTEM) {
-        return ChatTypes.SYSTEM;
-      }
-      logUnsupported(this, type);
-      return null;
+    @Override
+    public void sendMessage(final @NotNull ChatTypeMessageReceiver viewer, final @NotNull Text message) {
+      viewer.sendMessage(ChatTypes.SYSTEM, message);
     }
 
     @Override
-    public void sendMessage(final @NotNull ChatTypeMessageReceiver viewer, final @NotNull Identity source, final @NotNull Text message, final @NotNull Object type) {
-      final ChatType chat = type instanceof MessageType ? this.type((MessageType) type) : ChatTypes.SYSTEM;
-      if (chat != null) {
-        viewer.sendMessage(chat, message);
-      }
+    public void sendMessage(final @NotNull ChatTypeMessageReceiver viewer, final @NotNull Text message, final ChatType.@NotNull Bound boundChatType) {
+      viewer.sendMessage(ChatTypes.CHAT, message);
     }
   }
 
