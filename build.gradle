@@ -13,10 +13,10 @@ plugins {
 }
 
 // Adventure version
-ext.adventure = "5.1.1"
+ext.adventure = "5.2.0"
 
 group = 'net.kyori'
-version = '4.4.2-SNAPSHOT'
+version = '5.0.0-SNAPSHOT'
 description = 'Legacy platform integrations for the adventure UI library'
 
 /**
