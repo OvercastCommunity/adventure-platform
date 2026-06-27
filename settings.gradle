@@ -65,3 +65,6 @@ findProject(':api')?.name = 'adventure-platform-api'
   include "platform-$it"
   findProject(":platform-$it")?.name = "adventure-platform-$it"
 }
+
+enableFeaturePreview("NO_IMPLICIT_LOOKUP_IN_PARENT_PROJECTS")
+enableFeaturePreview("STABLE_CONFIGURATION_CACHE")
