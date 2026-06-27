@@ -32,8 +32,8 @@ import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.md_5.bungee.api.chat.BaseComponent;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import static net.kyori.adventure.platform.bukkit.MinecraftReflection.findClass;
 import static net.kyori.adventure.platform.bukkit.MinecraftReflection.findStaticMethod;
@@ -95,45 +95,44 @@ class PaperFacet<V extends CommandSender> extends FacetBase<V> {
     }
 
     @Override
-    public com.destroystokyo.paper.Title.@NotNull Builder createTitleCollection() {
+    public com.destroystokyo.paper.Title.@NonNull Builder createTitleCollection() {
       return com.destroystokyo.paper.Title.builder();
     }
 
     @Override
-    public void contributeTitle(final com.destroystokyo.paper.Title.@NotNull Builder coll, final BaseComponent @NotNull [] title) {
+    public void contributeTitle(final com.destroystokyo.paper.Title.@NonNull Builder coll, final BaseComponent @NonNull [] title) {
       coll.title(title);
     }
 
     @Override
-    public void contributeSubtitle(final com.destroystokyo.paper.Title.@NotNull Builder coll, final BaseComponent @NotNull [] subtitle) {
+    public void contributeSubtitle(final com.destroystokyo.paper.Title.@NonNull Builder coll, final BaseComponent @NonNull [] subtitle) {
       coll.subtitle(subtitle);
     }
 
     @Override
-    public void contributeTimes(final com.destroystokyo.paper.Title.@NotNull Builder coll, final int inTicks, final int stayTicks, final int outTicks) {
+    public void contributeTimes(final com.destroystokyo.paper.Title.@NonNull Builder coll, final int inTicks, final int stayTicks, final int outTicks) {
       if (inTicks > -1) coll.fadeIn(inTicks);
       if (stayTicks > -1) coll.stay(stayTicks);
       if (outTicks > -1) coll.fadeOut(outTicks);
     }
 
-    @Nullable
     @Override
-    public com.destroystokyo.paper.Title completeTitle(final com.destroystokyo.paper.Title.@NotNull Builder coll) {
+    public com.destroystokyo.paper.@Nullable Title completeTitle(final com.destroystokyo.paper.Title.@NonNull Builder coll) {
       return coll.build(); // todo: can't really do parts
     }
 
     @Override
-    public void showTitle(final @NotNull Player viewer, final com.destroystokyo.paper.@NotNull Title title) {
+    public void showTitle(final @NonNull Player viewer, final com.destroystokyo.paper.@NonNull Title title) {
       viewer.sendTitle(title);
     }
 
     @Override
-    public void clearTitle(final @NotNull Player viewer) {
+    public void clearTitle(final @NonNull Player viewer) {
       viewer.hideTitle();
     }
 
     @Override
-    public void resetTitle(final @NotNull Player viewer) {
+    public void resetTitle(final @NonNull Player viewer) {
       viewer.resetTitle();
     }
   }
@@ -177,7 +176,7 @@ class PaperFacet<V extends CommandSender> extends FacetBase<V> {
     }
 
     @Override
-    public @Nullable Object createMessage(final @NotNull Player viewer, final @NotNull Component message) {
+    public @Nullable Object createMessage(final @NonNull Player viewer, final @NonNull Component message) {
       try {
         return NATIVE_GSON_COMPONENT_SERIALIZER_DESERIALIZE_METHOD_BOUND.invoke(GsonComponentSerializer.gson().serialize(message));
       } catch (final Throwable throwable) {

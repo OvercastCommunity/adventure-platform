@@ -34,8 +34,7 @@ import net.kyori.adventure.text.TranslationArgument;
 import net.kyori.adventure.text.flattener.ComponentFlattener;
 import net.kyori.adventure.translation.GlobalTranslator;
 import org.jetbrains.annotations.ApiStatus;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 
 /**
  * A provider for component flatteners that uses the {@link Facet} system to access implementation details.
@@ -72,7 +71,7 @@ public final class FacetComponentFlattener {
         }
       }
 
-      final @NotNull String translated = translator == null ? key : translator.valueOrDefault(instance, key);
+      final String translated = translator == null ? key : translator.valueOrDefault(instance, key);
       final Matcher matcher = LOCALIZATION_PATTERN.matcher(translated);
       final List<TranslationArgument> args = translatable.arguments();
       int argPosition = 0;
@@ -82,7 +81,7 @@ public final class FacetComponentFlattener {
         if (lastIdx < matcher.start()) consumer.accept(Component.text(translated.substring(lastIdx, matcher.start())));
         lastIdx = matcher.end();
 
-        final @Nullable String argIdx = matcher.group(1);
+        final String argIdx = matcher.group(1);
         // calculate argument position
         if (argIdx != null) {
           try {
@@ -125,6 +124,6 @@ public final class FacetComponentFlattener {
      * @return a translation or the key
      * @since 4.0.0
      */
-    @NotNull String valueOrDefault(final @NotNull V game, final @NotNull String key);
+    @NonNull String valueOrDefault(final @NonNull V game, final @NonNull String key);
   }
 }

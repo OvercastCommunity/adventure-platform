@@ -30,7 +30,7 @@ import net.kyori.adventure.key.Key;
 import net.kyori.adventure.pointer.Pointered;
 import net.kyori.adventure.text.flattener.ComponentFlattener;
 import net.kyori.adventure.text.renderer.ComponentRenderer;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 /**
  * A provider for creating {@link Audience}s.
@@ -46,7 +46,7 @@ public interface AudienceProvider extends AutoCloseable {
    * @return the players' and console audience
    * @since 4.0.0
    */
-  @NotNull Audience all();
+  @NonNull Audience all();
 
   /**
    * Gets an audience for the server's console.
@@ -54,7 +54,7 @@ public interface AudienceProvider extends AutoCloseable {
    * @return the console audience
    * @since 4.0.0
    */
-  @NotNull Audience console();
+  @NonNull Audience console();
 
   /**
    * Gets an audience for all online players.
@@ -64,7 +64,7 @@ public interface AudienceProvider extends AutoCloseable {
    * @return the players' audience
    * @since 4.0.0
    */
-  @NotNull Audience players();
+  @NonNull Audience players();
 
   /**
    * Gets an audience for an individual player.
@@ -75,7 +75,7 @@ public interface AudienceProvider extends AutoCloseable {
    * @return a player audience
    * @since 4.0.0
    */
-  @NotNull Audience player(final @NotNull UUID playerId);
+  @NonNull Audience player(final @NonNull UUID playerId);
 
   /**
    * Gets or creates an audience containing all viewers with the provided permission.
@@ -86,7 +86,7 @@ public interface AudienceProvider extends AutoCloseable {
    * @return a permissible audience
    * @since 4.0.0
    */
-  default @NotNull Audience permission(final @NotNull Key permission) {
+  default @NonNull Audience permission(final @NonNull Key permission) {
     return this.permission(permission.namespace() + '.' + permission.value());
   }
 
@@ -99,7 +99,7 @@ public interface AudienceProvider extends AutoCloseable {
    * @return a permissible audience
    * @since 4.0.0
    */
-  @NotNull Audience permission(final @NotNull String permission);
+  @NonNull Audience permission(final @NonNull String permission);
 
   /**
    * Gets an audience for online players in a world, including the server's console.
@@ -113,7 +113,7 @@ public interface AudienceProvider extends AutoCloseable {
    * @return the world's audience
    * @since 4.0.0
    */
-  @NotNull Audience world(final @NotNull Key world);
+  @NonNull Audience world(final @NonNull Key world);
 
   /**
    * Gets an audience for online players on a server, including the server's console.
@@ -124,7 +124,7 @@ public interface AudienceProvider extends AutoCloseable {
    * @return a server's audience
    * @since 4.0.0
    */
-  @NotNull Audience server(final @NotNull String serverName);
+  @NonNull Audience server(final @NonNull String serverName);
 
   /**
    * Return a component flattener that can use game data to resolve extra information about components.
@@ -134,7 +134,7 @@ public interface AudienceProvider extends AutoCloseable {
    * @return the flattener
    * @since 4.0.0
    */
-  @NotNull ComponentFlattener flattener();
+  @NonNull ComponentFlattener flattener();
 
   /**
    * Closes the provider and forces audiences to be empty.
@@ -160,7 +160,7 @@ public interface AudienceProvider extends AutoCloseable {
      * @see #componentRenderer(Function, ComponentRenderer)
      * @since 4.0.0
      */
-    @NotNull B componentRenderer(final @NotNull ComponentRenderer<Pointered> componentRenderer);
+    @NonNull B componentRenderer(final @NonNull ComponentRenderer<Pointered> componentRenderer);
 
     /**
      * Set the partition function for the provider.
@@ -184,7 +184,7 @@ public interface AudienceProvider extends AutoCloseable {
      * @see #componentRenderer(Function, ComponentRenderer)
      * @since 4.0.0
      */
-    @NotNull B partition(final @NotNull Function<Pointered, ?> partitionFunction);
+    @NonNull B partition(final @NonNull Function<Pointered, ?> partitionFunction);
 
     /**
      * Sets the component renderer and partition function for the provider.
@@ -197,7 +197,7 @@ public interface AudienceProvider extends AutoCloseable {
      * @return this builder
      * @since 4.0.0
      */
-    default <T> @NotNull B componentRenderer(final @NotNull Function<Pointered, T> partition, final @NotNull ComponentRenderer<T> componentRenderer) {
+    default <T> @NonNull B componentRenderer(final @NonNull Function<Pointered, T> partition, final @NonNull ComponentRenderer<T> componentRenderer) {
       return this.partition(partition)
         .componentRenderer(componentRenderer.mapContext(partition));
     }
@@ -208,6 +208,6 @@ public interface AudienceProvider extends AutoCloseable {
      * @return the built provider
      * @since 4.0.0
      */
-    @NotNull P build();
+    @NonNull P build();
   }
 }

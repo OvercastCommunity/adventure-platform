@@ -30,7 +30,7 @@ import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Optional;
 import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import static net.kyori.adventure.platform.bukkit.MinecraftReflection.findClass;
 import static net.kyori.adventure.platform.bukkit.MinecraftReflection.findConstructor;

@@ -35,7 +35,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 @SuppressWarnings("Convert2MethodRef")
 final class BukkitAudience extends FacetAudience<CommandSender> {
@@ -91,15 +91,15 @@ final class BukkitAudience extends FacetAudience<CommandSender> {
     () -> new BukkitFacet.PlayerPointers()
   );
 
-  private final @NotNull Plugin plugin;
+  private final @NonNull Plugin plugin;
 
-  BukkitAudience(final @NotNull Plugin plugin, final FacetAudienceProvider<?, ?> provider, final @NotNull Collection<CommandSender> viewers) {
+  BukkitAudience(final @NonNull Plugin plugin, final FacetAudienceProvider<?, ?> provider, final @NonNull Collection<CommandSender> viewers) {
     super(provider, viewers, CHAT, ACTION_BAR, TITLE, SOUND, ENTITY_SOUND, BOOK, BOSS_BAR, TAB_LIST, POINTERS);
     this.plugin = plugin;
   }
 
   @Override
-  public void showBossBar(final @NotNull BossBar bar) {
+  public void showBossBar(final @NonNull BossBar bar) {
     // Some boss bar listeners need access to a Plugin to register events.
     // So keep track of the last plugin before each boss bar invocation.
     PLUGIN.set(this.plugin);
@@ -107,6 +107,6 @@ final class BukkitAudience extends FacetAudience<CommandSender> {
     super.showBossBar(bar);
 
     // Unset plugin after boss bar is created.
-    PLUGIN.set(null);
+    PLUGIN.remove();
   }
 }

@@ -31,7 +31,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 /**
  * An audience provider for {@link org.bukkit.Bukkit}.
@@ -49,7 +49,7 @@ public interface BukkitAudiences extends AudienceProvider {
    * @return an audience provider
    * @since 4.0.0
    */
-  static @NotNull BukkitAudiences create(final @NotNull Plugin plugin) {
+  static @NonNull BukkitAudiences create(final @NonNull Plugin plugin) {
     return BukkitAudiencesImpl.instanceFor(plugin);
   }
 
@@ -62,7 +62,7 @@ public interface BukkitAudiences extends AudienceProvider {
    * @return an audience provider
    * @since 4.0.0
    */
-  static @NotNull Builder builder(final @NotNull Plugin plugin) {
+  static @NonNull Builder builder(final @NonNull Plugin plugin) {
     return BukkitAudiencesImpl.builder(plugin);
   }
 
@@ -73,7 +73,7 @@ public interface BukkitAudiences extends AudienceProvider {
    * @return an emitter
    * @since 4.0.0
    */
-  static Sound.@NotNull Emitter asEmitter(final @NotNull Entity entity) {
+  static Sound.@NonNull Emitter asEmitter(final @NonNull Entity entity) {
     return new BukkitEmitter(entity);
   }
 
@@ -84,7 +84,7 @@ public interface BukkitAudiences extends AudienceProvider {
    * @return an audience
    * @since 4.0.0
    */
-  @NotNull Audience sender(final @NotNull CommandSender sender);
+  @NonNull Audience sender(final @NonNull CommandSender sender);
 
   /**
    * Gets an audience for a player.
@@ -93,7 +93,7 @@ public interface BukkitAudiences extends AudienceProvider {
    * @return an audience
    * @since 4.0.0
    */
-  @NotNull Audience player(final @NotNull Player player);
+  @NonNull Audience player(final @NonNull Player player);
 
   /**
    * Creates an audience based on a filter.
@@ -102,7 +102,7 @@ public interface BukkitAudiences extends AudienceProvider {
    * @return an audience
    * @since 4.0.0
    */
-  @NotNull Audience filter(final @NotNull Predicate<CommandSender> filter);
+  @NonNull Audience filter(final @NonNull Predicate<CommandSender> filter);
 
   /**
    * A builder for {@link BukkitAudiences}.

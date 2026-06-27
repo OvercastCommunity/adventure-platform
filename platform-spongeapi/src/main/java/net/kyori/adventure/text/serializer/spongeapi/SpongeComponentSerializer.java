@@ -28,7 +28,7 @@ import net.kyori.adventure.text.serializer.ComponentSerializer;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.kyori.adventure.text.serializer.json.JSONOptions;
 import net.kyori.adventure.text.serializer.json.legacyimpl.NBTLegacyHoverEventSerializer;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 import org.spongepowered.api.Platform;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.serializer.TextSerializers;
@@ -57,7 +57,7 @@ public final class SpongeComponentSerializer implements ComponentSerializer<Comp
    * @return a component serializer
    * @since 4.0.0
    */
-  public static @NotNull SpongeComponentSerializer get() {
+  public static @NonNull SpongeComponentSerializer get() {
     return INSTANCE;
   }
 
@@ -65,12 +65,12 @@ public final class SpongeComponentSerializer implements ComponentSerializer<Comp
   }
 
   @Override
-  public @NotNull Component deserialize(final @NotNull Text input) {
+  public @NonNull Component deserialize(final @NonNull Text input) {
     return LEGACY_GSON_SERIALIZER.deserialize(TextSerializers.JSON.serialize(requireNonNull(input, "text")));
   }
 
   @Override
-  public @NotNull Text serialize(final @NotNull Component component) {
+  public @NonNull Text serialize(final @NonNull Component component) {
     return TextSerializers.JSON.deserialize(LEGACY_GSON_SERIALIZER.serialize(requireNonNull(component, "component")));
   }
 }

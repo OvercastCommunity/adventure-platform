@@ -47,7 +47,7 @@ import net.md_5.bungee.api.event.PlayerDisconnectEvent;
 import net.md_5.bungee.api.event.PostLoginEvent;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.event.EventHandler;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 import static java.util.Objects.requireNonNull;
 import static net.kyori.adventure.platform.facet.Knob.logError;
@@ -72,18 +72,18 @@ final class BungeeAudiencesImpl extends FacetAudienceProvider<CommandSender, Bun
 
   private static final Map<String, BungeeAudiences> INSTANCES = Collections.synchronizedMap(new HashMap<>(4));
 
-  static @NotNull BungeeAudiences instanceFor(final @NotNull Plugin plugin) {
+  static @NonNull BungeeAudiences instanceFor(final @NonNull Plugin plugin) {
     return builder(plugin).build();
   }
 
-  static @NotNull Builder builder(final @NotNull Plugin plugin) {
+  static @NonNull Builder builder(final @NonNull Plugin plugin) {
     return new Builder(plugin);
   }
 
   private final Plugin plugin;
   private final Listener listener;
 
-  BungeeAudiencesImpl(final Plugin plugin, final @NotNull ComponentRenderer<Pointered> componentRenderer) {
+  BungeeAudiencesImpl(final Plugin plugin, final @NonNull ComponentRenderer<Pointered> componentRenderer) {
     super(componentRenderer);
     this.plugin = requireNonNull(plugin, "plugin");
     this.listener = new Listener();
@@ -97,9 +97,9 @@ final class BungeeAudiencesImpl extends FacetAudienceProvider<CommandSender, Bun
     }
   }
 
-  @NotNull
+  @NonNull
   @Override
-  public Audience sender(final @NotNull CommandSender sender) {
+  public Audience sender(final @NonNull CommandSender sender) {
     if (sender instanceof ProxiedPlayer) {
       return this.player((ProxiedPlayer) sender);
     } else if (ProxyServer.getInstance().getConsole().equals(sender)) {
@@ -108,19 +108,19 @@ final class BungeeAudiencesImpl extends FacetAudienceProvider<CommandSender, Bun
     return this.createAudience(Collections.singletonList(sender));
   }
 
-  @NotNull
+  @NonNull
   @Override
-  public Audience player(final @NotNull ProxiedPlayer player) {
+  public Audience player(final @NonNull ProxiedPlayer player) {
     return this.player(player.getUniqueId());
   }
 
   @Override
-  protected @NotNull BungeeAudience createAudience(final @NotNull Collection<CommandSender> viewers) {
+  protected @NonNull BungeeAudience createAudience(final @NonNull Collection<CommandSender> viewers) {
     return new BungeeAudience(this, viewers);
   }
 
   @Override
-  public @NotNull ComponentFlattener flattener() {
+  public @NonNull ComponentFlattener flattener() {
     return BungeeFacet.FLATTENER;
   }
 
@@ -132,28 +132,28 @@ final class BungeeAudiencesImpl extends FacetAudienceProvider<CommandSender, Bun
   }
 
   static final class Builder implements BungeeAudiences.Builder {
-    private final @NotNull Plugin plugin;
+    private final @NonNull Plugin plugin;
     private ComponentRenderer<Pointered> componentRenderer;
 
-    Builder(final @NotNull Plugin plugin) {
+    Builder(final @NonNull Plugin plugin) {
       this.plugin = requireNonNull(plugin, "plugin");
       this.componentRenderer(ptr -> ptr.getOrDefault(Identity.LOCALE, DEFAULT_LOCALE), GlobalTranslator.renderer());
     }
 
     @Override
-    public @NotNull Builder componentRenderer(final @NotNull ComponentRenderer<Pointered> componentRenderer) {
+    public @NonNull Builder componentRenderer(final @NonNull ComponentRenderer<Pointered> componentRenderer) {
       this.componentRenderer = requireNonNull(componentRenderer, "component renderer");
       return this;
     }
 
     @Override
-    public BungeeAudiences.@NotNull Builder partition(final @NotNull Function<Pointered, ?> partitionFunction) {
+    public BungeeAudiences.@NonNull Builder partition(final @NonNull Function<Pointered, ?> partitionFunction) {
       requireNonNull(partitionFunction, "partitionFunction"); // unused
       return this;
     }
 
     @Override
-    public @NotNull BungeeAudiences build() {
+    public @NonNull BungeeAudiences build() {
       return INSTANCES.computeIfAbsent(this.plugin.getDescription().getName(), name -> new BungeeAudiencesImpl(this.plugin, this.componentRenderer));
     }
   }

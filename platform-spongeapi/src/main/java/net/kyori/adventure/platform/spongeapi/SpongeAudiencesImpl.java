@@ -41,7 +41,7 @@ import net.kyori.adventure.pointer.Pointered;
 import net.kyori.adventure.text.flattener.ComponentFlattener;
 import net.kyori.adventure.text.renderer.ComponentRenderer;
 import net.kyori.adventure.translation.GlobalTranslator;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.api.Game;
@@ -77,14 +77,14 @@ final class SpongeAudiencesImpl extends FacetAudienceProvider<MessageReceiver, S
     SpongeFacet.Translator::new
   );
 
-  static SpongeAudiences instanceFor(final @NotNull PluginContainer plugin, final @NotNull Game game) {
+  static SpongeAudiences instanceFor(final @NonNull PluginContainer plugin, final @NonNull Game game) {
     return builder(
       requireNonNull(plugin, "plugin"),
       requireNonNull(game, "game")
     ).build();
   }
 
-  static Builder builder(final @NotNull PluginContainer plugin, final @NotNull Game game) {
+  static Builder builder(final @NonNull PluginContainer plugin, final @NonNull Game game) {
     return new Builder(plugin, game);
   }
 
@@ -95,11 +95,11 @@ final class SpongeAudiencesImpl extends FacetAudienceProvider<MessageReceiver, S
   private final ComponentFlattener flattener;
 
   @Inject
-  SpongeAudiencesImpl(final @NotNull PluginContainer plugin, final @NotNull Game game) {
+  SpongeAudiencesImpl(final @NonNull PluginContainer plugin, final @NonNull Game game) {
     this(plugin, game, GlobalTranslator.renderer().mapContext(ptr -> ptr.getOrDefault(Identity.LOCALE, FacetAudienceProvider.DEFAULT_LOCALE)));
   }
 
-  SpongeAudiencesImpl(final @NotNull PluginContainer plugin, final @NotNull Game game, final @NotNull ComponentRenderer<Pointered> componentRenderer) {
+  SpongeAudiencesImpl(final @NonNull PluginContainer plugin, final @NonNull Game game, final @NonNull ComponentRenderer<Pointered> componentRenderer) {
     super(componentRenderer);
     this.plugin = plugin;
     this.game = game;
@@ -115,9 +115,9 @@ final class SpongeAudiencesImpl extends FacetAudienceProvider<MessageReceiver, S
     }
   }
 
-  @NotNull
+  @NonNull
   @Override
-  public Audience receiver(final @NotNull MessageReceiver receiver) {
+  public Audience receiver(final @NonNull MessageReceiver receiver) {
     if (receiver instanceof Player) {
       return this.player((Player) receiver);
     } else if (receiver instanceof ConsoleSource
@@ -133,19 +133,19 @@ final class SpongeAudiencesImpl extends FacetAudienceProvider<MessageReceiver, S
     return new SpongeAudience(this, Collections.singletonList(receiver));
   }
 
-  @NotNull
+  @NonNull
   @Override
-  public Audience player(final @NotNull Player player) {
+  public Audience player(final @NonNull Player player) {
     return this.player(player.getUniqueId());
   }
 
   @Override
-  protected @NotNull SpongeAudience createAudience(final @NotNull Collection<MessageReceiver> viewers) {
+  protected @NonNull SpongeAudience createAudience(final @NonNull Collection<MessageReceiver> viewers) {
     return new SpongeAudience(this, viewers);
   }
 
   @Override
-  public @NotNull ComponentFlattener flattener() {
+  public @NonNull ComponentFlattener flattener() {
     return this.flattener;
   }
 
@@ -157,11 +157,11 @@ final class SpongeAudiencesImpl extends FacetAudienceProvider<MessageReceiver, S
   }
 
   final static class Builder implements SpongeAudiences.Builder {
-    private final @NotNull PluginContainer plugin;
-    private final @NotNull Game game;
+    private final @NonNull PluginContainer plugin;
+    private final @NonNull Game game;
     private ComponentRenderer<Pointered> componentRenderer;
 
-    Builder(final @NotNull PluginContainer plugin, final @NotNull Game game) {
+    Builder(final @NonNull PluginContainer plugin, final @NonNull Game game) {
       super();
       this.plugin = requireNonNull(plugin, "plugin");
       this.game = requireNonNull(game, "game");
@@ -169,41 +169,41 @@ final class SpongeAudiencesImpl extends FacetAudienceProvider<MessageReceiver, S
     }
 
     @Override
-    public @NotNull Builder componentRenderer(final @NotNull ComponentRenderer<Pointered> componentRenderer) {
+    public @NonNull Builder componentRenderer(final @NonNull ComponentRenderer<Pointered> componentRenderer) {
       this.componentRenderer = requireNonNull(componentRenderer, "component renderer");
       return this;
     }
 
     @Override
-    public SpongeAudiences.@NotNull Builder partition(final @NotNull Function<Pointered, ?> partitionFunction) {
+    public SpongeAudiences.@NonNull Builder partition(final @NonNull Function<Pointered, ?> partitionFunction) {
       requireNonNull(partitionFunction, "partitionFunction");
       return this;
     }
 
     @Override
-    public @NotNull SpongeAudiences build() {
+    public @NonNull SpongeAudiences build() {
       return INSTANCES.computeIfAbsent(this.plugin.getId(), id -> new SpongeAudiencesImpl(this.plugin, this.game, this.componentRenderer));
     }
   }
 
   public final class EventListener {
     @Listener(order = Order.FIRST)
-    public void onLogin(final ClientConnectionEvent.@NotNull Join event) {
+    public void onLogin(final ClientConnectionEvent.@NonNull Join event) {
       SpongeAudiencesImpl.this.addViewer(event.getTargetEntity());
     }
 
     @Listener(order = Order.LAST)
-    public void onDisconnect(final ClientConnectionEvent.@NotNull Disconnect event) {
+    public void onDisconnect(final ClientConnectionEvent.@NonNull Disconnect event) {
       SpongeAudiencesImpl.this.removeViewer(event.getTargetEntity());
     }
 
     @Listener
-    public void onStart(final @NotNull GameStartingServerEvent event) {
+    public void onStart(final @NonNull GameStartingServerEvent event) {
       SpongeAudiencesImpl.this.addViewer(SpongeAudiencesImpl.this.game.getServer().getConsole());
     }
 
     @Listener
-    public void onStop(final @NotNull GameStoppedServerEvent event) {
+    public void onStop(final @NonNull GameStoppedServerEvent event) {
       SpongeAudiencesImpl.this.removeViewer(SpongeAudiencesImpl.this.game.getServer().getConsole());
     }
   }

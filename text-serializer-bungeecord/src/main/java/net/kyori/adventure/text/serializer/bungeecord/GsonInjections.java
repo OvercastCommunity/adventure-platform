@@ -32,7 +32,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 final class GsonInjections {
   private GsonInjections() {
@@ -46,7 +46,7 @@ final class GsonInjections {
    * @return the field
    * @throws NoSuchFieldException when thrown by {@link Class#getDeclaredField(String)}
    */
-  public static Field field(final @NotNull Class<?> klass, final @NotNull String name) throws NoSuchFieldException {
+  public static Field field(final @NonNull Class<?> klass, final @NonNull String name) throws NoSuchFieldException {
     final Field field = klass.getDeclaredField(name);
     field.setAccessible(true);
     return field;
@@ -55,7 +55,7 @@ final class GsonInjections {
   // Gson //
 
   @SuppressWarnings("unchecked")
-  public static boolean injectGson(final @NotNull Gson existing, final @NotNull Consumer<GsonBuilder> accepter) {
+  public static boolean injectGson(final @NonNull Gson existing, final @NonNull Consumer<GsonBuilder> accepter) {
     try {
       final Field factoriesField = field(Gson.class, "factories");
       final Field builderFactoriesField = field(GsonBuilder.class, "factories");
@@ -65,8 +65,7 @@ final class GsonInjections {
       accepter.accept(builder);
 
       final List<TypeAdapterFactory> existingFactories = (List<TypeAdapterFactory>) factoriesField.get(existing);
-      final List<TypeAdapterFactory> newFactories = new ArrayList<>();
-      newFactories.addAll((List<TypeAdapterFactory>) builderFactoriesField.get(builder));
+      final List<TypeAdapterFactory> newFactories = new ArrayList<>((List<TypeAdapterFactory>) builderFactoriesField.get(builder));
       Collections.reverse(newFactories);
       newFactories.addAll((List<TypeAdapterFactory>) builderHierarchyFactoriesField.get(builder));
 
@@ -87,7 +86,7 @@ final class GsonInjections {
     }
   }
 
-  private static int findExcluderIndex(final @NotNull List<TypeAdapterFactory> factories) {
+  private static int findExcluderIndex(final @NonNull List<TypeAdapterFactory> factories) {
     for (int i = 0, size = factories.size(); i < size; i++) {
       final TypeAdapterFactory factory = factories.get(i);
       if (factory instanceof Excluder) {

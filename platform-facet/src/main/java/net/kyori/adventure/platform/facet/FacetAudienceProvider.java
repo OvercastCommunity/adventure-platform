@@ -47,8 +47,7 @@ import net.kyori.adventure.pointer.Pointers;
 import net.kyori.adventure.text.renderer.ComponentRenderer;
 import net.kyori.adventure.util.TriState;
 import org.jetbrains.annotations.ApiStatus;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 
 import static java.util.Objects.requireNonNull;
 
@@ -75,19 +74,19 @@ public abstract class FacetAudienceProvider<V, A extends FacetAudience<V>>
   private A empty;
   private volatile boolean closed;
 
-  protected FacetAudienceProvider(final @NotNull ComponentRenderer<Pointered> componentRenderer) {
+  protected FacetAudienceProvider(final @NonNull ComponentRenderer<Pointered> componentRenderer) {
     this.componentRenderer = requireNonNull(componentRenderer, "component renderer");
     this.viewers = new ConcurrentHashMap<>();
     this.players = new ConcurrentHashMap<>();
     this.consoles = new CopyOnWriteArraySet<>();
     this.console = new ForwardingAudience() {
       @Override
-      public @NotNull Iterable<? extends Audience> audiences() {
+      public @NonNull Iterable<? extends Audience> audiences() {
         return FacetAudienceProvider.this.consoles;
       }
 
       @Override
-      public @NotNull Pointers pointers() {
+      public @NonNull Pointers pointers() {
         if (FacetAudienceProvider.this.consoles.size() == 1) {
           return FacetAudienceProvider.this.consoles.iterator().next().pointers();
         } else {
@@ -105,14 +104,14 @@ public abstract class FacetAudienceProvider<V, A extends FacetAudience<V>>
    * @param viewer a viewer
    * @since 4.0.0
    */
-  public void addViewer(final @NotNull V viewer) {
+  public void addViewer(final @NonNull V viewer) {
     if (this.closed) return;
     final A audience = this.viewers.computeIfAbsent(
         requireNonNull(viewer, "viewer"),
         v -> this.createAudience(Collections.singletonList(v)));
     final FacetPointers.Type type = audience.getOrDefault(FacetPointers.TYPE, FacetPointers.Type.OTHER);
     if (type == FacetPointers.Type.PLAYER) {
-      final @Nullable UUID id = audience.getOrDefault(Identity.UUID, null);
+      final UUID id = audience.getOrDefault(Identity.UUID, null);
       if (id != null) this.players.putIfAbsent(id, audience);
     } else if (type == FacetPointers.Type.CONSOLE) {
       this.consoles.add(audience);
@@ -125,12 +124,12 @@ public abstract class FacetAudienceProvider<V, A extends FacetAudience<V>>
    * @param viewer a viewer
    * @since 4.0.0
    */
-  public void removeViewer(final @NotNull V viewer) {
+  public void removeViewer(final @NonNull V viewer) {
     final A audience = this.viewers.remove(viewer);
     if (audience == null) return;
     final FacetPointers.Type type = audience.getOrDefault(FacetPointers.TYPE, FacetPointers.Type.OTHER);
     if (type == FacetPointers.Type.PLAYER) {
-      final @Nullable UUID id = audience.getOrDefault(Identity.UUID, null);
+      final UUID id = audience.getOrDefault(Identity.UUID, null);
       if (id != null) this.players.remove(id);
     } else if (type == FacetPointers.Type.CONSOLE) {
       this.consoles.remove(audience);
@@ -146,7 +145,7 @@ public abstract class FacetAudienceProvider<V, A extends FacetAudience<V>>
    * @param viewer a viewer
    * @since 4.0.0
    */
-  public void refreshViewer(final @NotNull V viewer) {
+  public void refreshViewer(final @NonNull V viewer) {
     final A audience = this.viewers.get(viewer);
     if (audience != null) {
       audience.refresh();
@@ -159,34 +158,34 @@ public abstract class FacetAudienceProvider<V, A extends FacetAudience<V>>
    * @param viewers a collection viewers
    * @return an audience
    */
-  protected abstract @NotNull A createAudience(final @NotNull Collection<V> viewers);
+  protected abstract @NonNull A createAudience(final @NonNull Collection<V> viewers);
 
   @Override
-  public @NotNull Iterable<? extends Audience> audiences() {
+  public @NonNull Iterable<? extends Audience> audiences() {
     return this.viewers.values();
   }
 
   @Override
-  public @NotNull Audience all() {
+  public @NonNull Audience all() {
     return this;
   }
 
   @Override
-  public @NotNull Audience console() {
+  public @NonNull Audience console() {
     return this.console;
   }
 
   @Override
-  public @NotNull Audience players() {
+  public @NonNull Audience players() {
     return this.player;
   }
 
   @Override
-  public @NotNull Audience player(final @NotNull UUID playerId) {
+  public @NonNull Audience player(final @NonNull UUID playerId) {
     return this.players.getOrDefault(playerId, this.empty());
   }
 
-  private @NotNull A empty() {
+  private @NonNull A empty() {
     if (this.empty == null) {
       this.empty = this.createAudience(Collections.emptyList());
     }
@@ -200,13 +199,13 @@ public abstract class FacetAudienceProvider<V, A extends FacetAudience<V>>
    * @return an audience
    * @since 4.0.0
    */
-  public @NotNull Audience filter(final @NotNull Predicate<V> predicate) {
+  public @NonNull Audience filter(final @NonNull Predicate<V> predicate) {
     return Audience.audience(
       filter(
         this.viewers.entrySet(), entry -> predicate.test(entry.getKey()), Map.Entry::getValue));
   }
 
-  private @NotNull Audience filterPointers(final @NotNull Predicate<Pointered> predicate) {
+  private @NonNull Audience filterPointers(final @NonNull Predicate<Pointered> predicate) {
     return Audience.audience(
       filter(
         this.viewers.entrySet(),
@@ -215,17 +214,17 @@ public abstract class FacetAudienceProvider<V, A extends FacetAudience<V>>
   }
 
   @Override
-  public @NotNull Audience permission(final @NotNull String permission) {
+  public @NonNull Audience permission(final @NonNull String permission) {
     return this.filterPointers(pointers -> pointers.get(PermissionChecker.POINTER).orElse(PermissionChecker.always(TriState.FALSE)).test(permission));
   }
 
   @Override
-  public @NotNull Audience world(final @NotNull Key world) {
+  public @NonNull Audience world(final @NonNull Key world) {
     return this.filterPointers(pointers -> world.equals(pointers.getOrDefault(FacetPointers.WORLD, null)));
   }
 
   @Override
-  public @NotNull Audience server(final @NotNull String serverName) {
+  public @NonNull Audience server(final @NonNull String serverName) {
     return this.filterPointers(pointers -> serverName.equals(pointers.getOrDefault(FacetPointers.SERVER, null)));
   }
 
@@ -253,15 +252,15 @@ public abstract class FacetAudienceProvider<V, A extends FacetAudience<V>>
    * @param <V> another value type
    * @return live filtered view
    */
-  private static <T, V> @NotNull Iterable<V> filter(final @NotNull Iterable<T> input, final @NotNull Predicate<T> filter, final @NotNull Function<T, V> transformer) {
-    return new Iterable<V>() {
+  private static <T, V> @NonNull Iterable<V> filter(final @NonNull Iterable<T> input, final @NonNull Predicate<T> filter, final @NonNull Function<T, V> transformer) {
+    return new Iterable<>() {
       // create a lazy iterator
       // pre-fetches by one output value to determine whether or not we have another value
       // one value will be fetched on iterator creation, and each next value will be
       // fetched after returning the previous value.
       @Override
-      public @NotNull Iterator<V> iterator() {
-        return new Iterator<V>() {
+      public @NonNull Iterator<V> iterator() {
+        return new Iterator<>() {
           private final Iterator<T> parent = input.iterator();
           private V next;
 

@@ -27,55 +27,55 @@ import java.util.Set;
 import java.util.function.Function;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 class FacetBossBarListener<V> implements Facet.BossBar<V> {
   private final Facet.BossBar<V> facet;
   private final Function<Component, Component> translator;
 
-  FacetBossBarListener(final Facet.@NotNull BossBar<V> facet, final @NotNull Function<Component, Component> translator) {
+  FacetBossBarListener(final Facet.@NonNull BossBar<V> facet, final @NonNull Function<Component, Component> translator) {
     this.facet = facet;
     this.translator = translator;
   }
 
   @Override
-  public void bossBarInitialized(final @NotNull BossBar bar) {
+  public void bossBarInitialized(final @NonNull BossBar bar) {
     this.facet.bossBarInitialized(bar);
     this.bossBarNameChanged(bar, bar.name(), bar.name()); // Redo name change with translation
   }
 
   @Override
-  public void bossBarNameChanged(final @NotNull BossBar bar, final @NotNull Component oldName, final @NotNull Component newName) {
+  public void bossBarNameChanged(final @NonNull BossBar bar, final @NonNull Component oldName, final @NonNull Component newName) {
     this.facet.bossBarNameChanged(bar, oldName, this.translator.apply(newName));
   }
 
   @Override
-  public void bossBarProgressChanged(final @NotNull BossBar bar, final float oldPercent, final float newPercent) {
+  public void bossBarProgressChanged(final @NonNull BossBar bar, final float oldPercent, final float newPercent) {
     this.facet.bossBarProgressChanged(bar, oldPercent, newPercent);
   }
 
   @Override
-  public void bossBarColorChanged(final @NotNull BossBar bar, final BossBar.@NotNull Color oldColor, final BossBar.@NotNull Color newColor) {
+  public void bossBarColorChanged(final @NonNull BossBar bar, final BossBar.@NonNull Color oldColor, final BossBar.@NonNull Color newColor) {
     this.facet.bossBarColorChanged(bar, oldColor, newColor);
   }
 
   @Override
-  public void bossBarOverlayChanged(final @NotNull BossBar bar, final BossBar.@NotNull Overlay oldOverlay, final BossBar.@NotNull Overlay newOverlay) {
+  public void bossBarOverlayChanged(final @NonNull BossBar bar, final BossBar.@NonNull Overlay oldOverlay, final BossBar.@NonNull Overlay newOverlay) {
     this.facet.bossBarOverlayChanged(bar, oldOverlay, newOverlay);
   }
 
   @Override
-  public void bossBarFlagsChanged(final @NotNull BossBar bar, final @NotNull Set<BossBar.Flag> flagsAdded, final @NotNull Set<BossBar.Flag> flagsRemoved) {
+  public void bossBarFlagsChanged(final @NonNull BossBar bar, final @NonNull Set<BossBar.Flag> flagsAdded, final @NonNull Set<BossBar.Flag> flagsRemoved) {
     this.facet.bossBarFlagsChanged(bar, flagsAdded, flagsRemoved);
   }
 
   @Override
-  public void addViewer(final @NotNull V viewer) {
+  public void addViewer(final @NonNull V viewer) {
     this.facet.addViewer(viewer);
   }
 
   @Override
-  public void removeViewer(final @NotNull V viewer) {
+  public void removeViewer(final @NonNull V viewer) {
     this.facet.removeViewer(viewer);
   }
 

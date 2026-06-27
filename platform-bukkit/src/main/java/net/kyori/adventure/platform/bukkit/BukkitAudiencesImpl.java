@@ -57,7 +57,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 import static java.util.Objects.requireNonNull;
 import static net.kyori.adventure.platform.bukkit.MinecraftReflection.needField;
@@ -73,17 +73,17 @@ final class BukkitAudiencesImpl extends FacetAudienceProvider<CommandSender, Buk
 
   private static final Map<String, BukkitAudiences> INSTANCES = Collections.synchronizedMap(new HashMap<>(4));
 
-  static Builder builder(final @NotNull Plugin plugin) {
+  static Builder builder(final @NonNull Plugin plugin) {
     return new Builder(plugin);
   }
 
-  static BukkitAudiences instanceFor(final @NotNull Plugin plugin) {
+  static BukkitAudiences instanceFor(final @NonNull Plugin plugin) {
     return builder(plugin).build();
   }
 
   private final Plugin plugin;
 
-  BukkitAudiencesImpl(final @NotNull Plugin plugin, final @NotNull ComponentRenderer<Pointered> componentRenderer) {
+  BukkitAudiencesImpl(final @NonNull Plugin plugin, final @NonNull ComponentRenderer<Pointered> componentRenderer) {
     super(componentRenderer);
     this.plugin = requireNonNull(plugin, "plugin");
 
@@ -101,7 +101,7 @@ final class BukkitAudiencesImpl extends FacetAudienceProvider<CommandSender, Buk
   }
 
   @Override
-  public @NotNull Audience sender(final @NotNull CommandSender sender) {
+  public @NonNull Audience sender(final @NonNull CommandSender sender) {
     if (sender instanceof Player) {
       return this.player((Player) sender);
     } else if (sender instanceof ConsoleCommandSender) {
@@ -115,12 +115,12 @@ final class BukkitAudiencesImpl extends FacetAudienceProvider<CommandSender, Buk
   }
 
   @Override
-  public @NotNull Audience player(final @NotNull Player player) {
+  public @NonNull Audience player(final @NonNull Player player) {
     return super.player(player.getUniqueId());
   }
 
   @Override
-  protected @NotNull BukkitAudience createAudience(final @NotNull Collection<CommandSender> viewers) {
+  protected @NonNull BukkitAudience createAudience(final @NonNull Collection<CommandSender> viewers) {
     return new BukkitAudience(this.plugin, this, viewers);
   }
 
@@ -131,33 +131,33 @@ final class BukkitAudiencesImpl extends FacetAudienceProvider<CommandSender, Buk
   }
 
   @Override
-  public @NotNull ComponentFlattener flattener() {
+  public @NonNull ComponentFlattener flattener() {
     return BukkitComponentSerializer.FLATTENER;
   }
 
   static final class Builder implements BukkitAudiences.Builder {
-    private final @NotNull Plugin plugin;
+    private final @NonNull Plugin plugin;
     private ComponentRenderer<Pointered> componentRenderer;
 
-    Builder(final @NotNull Plugin plugin) {
+    Builder(final @NonNull Plugin plugin) {
       this.plugin = requireNonNull(plugin, "plugin");
       this.componentRenderer(ptr -> ptr.getOrDefault(Identity.LOCALE, DEFAULT_LOCALE), GlobalTranslator.renderer());
     }
 
     @Override
-    public @NotNull Builder componentRenderer(final @NotNull ComponentRenderer<Pointered> componentRenderer) {
+    public @NonNull Builder componentRenderer(final @NonNull ComponentRenderer<Pointered> componentRenderer) {
       this.componentRenderer = requireNonNull(componentRenderer, "component renderer");
       return this;
     }
 
     @Override
-    public BukkitAudiences.@NotNull Builder partition(final @NotNull Function<Pointered, ?> partitionFunction) {
+    public BukkitAudiences.@NonNull Builder partition(final @NonNull Function<Pointered, ?> partitionFunction) {
       requireNonNull(partitionFunction, "partitionFunction"); // unused
       return this;
     }
 
     @Override
-    public @NotNull BukkitAudiences build() {
+    public @NonNull BukkitAudiences build() {
       return INSTANCES.computeIfAbsent(this.plugin.getName(), name -> {
         this.softDepend("ViaVersion");
         return new BukkitAudiencesImpl(this.plugin, this.componentRenderer);
@@ -176,7 +176,7 @@ final class BukkitAudiencesImpl extends FacetAudienceProvider<CommandSender, Buk
      * @param pluginName a plugin name
      */
     @SuppressWarnings("unchecked")
-    private void softDepend(final @NotNull String pluginName) {
+    private void softDepend(final @NonNull String pluginName) {
       final PluginDescriptionFile file = this.plugin.getDescription();
       if (file.getName().equals(pluginName)) return;
 
@@ -213,7 +213,7 @@ final class BukkitAudiencesImpl extends FacetAudienceProvider<CommandSender, Buk
    * @param <T> an event type
    */
   @SuppressWarnings("unchecked")
-  private <T extends Event> void registerEvent(final @NotNull Class<T> type, final @NotNull EventPriority priority, final @NotNull Consumer<T> callback) {
+  private <T extends Event> void registerEvent(final @NonNull Class<T> type, final @NonNull EventPriority priority, final @NonNull Consumer<T> callback) {
     requireNonNull(callback, "callback");
     this.plugin.getServer().getPluginManager().registerEvent(type, this, priority, (listener, event) -> callback.accept((T) event), this.plugin, true);
   }

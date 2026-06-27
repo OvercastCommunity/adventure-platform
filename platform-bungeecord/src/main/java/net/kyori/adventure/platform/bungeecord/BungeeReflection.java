@@ -26,7 +26,7 @@ package net.kyori.adventure.platform.bungeecord;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Reflection utilities for accessing legacy BungeeCord methods.

@@ -34,7 +34,7 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Server;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 import static net.kyori.adventure.platform.bukkit.MinecraftReflection.findEnum;
 
@@ -92,7 +92,7 @@ public final class BukkitComponentSerializer {
    * @return a legacy component serializer
    * @since 4.0.0
    */
-  public static @NotNull LegacyComponentSerializer legacy() {
+  public static @NonNull LegacyComponentSerializer legacy() {
     return LEGACY_SERIALIZER;
   }
 
@@ -104,7 +104,7 @@ public final class BukkitComponentSerializer {
    * @return a gson component serializer
    * @since 4.0.0
    */
-  public static @NotNull GsonComponentSerializer gson() {
+  public static @NonNull GsonComponentSerializer gson() {
     return GSON_SERIALIZER;
   }
 }

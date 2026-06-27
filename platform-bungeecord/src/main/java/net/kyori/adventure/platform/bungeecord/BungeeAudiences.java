@@ -29,7 +29,7 @@ import net.kyori.adventure.platform.AudienceProvider;
 import net.md_5.bungee.api.CommandSender;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.plugin.Plugin;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 /**
  * A provider for creating {@link Audience}s for BungeeCord.
@@ -46,7 +46,7 @@ public interface BungeeAudiences extends AudienceProvider {
    * @return an audience provider
    * @since 4.0.0
    */
-  static @NotNull BungeeAudiences create(final @NotNull Plugin plugin) {
+  static @NonNull BungeeAudiences create(final @NonNull Plugin plugin) {
     return BungeeAudiencesImpl.instanceFor(plugin);
   }
 
@@ -59,7 +59,7 @@ public interface BungeeAudiences extends AudienceProvider {
    * @return an audience provider
    * @since 4.0.0
    */
-  static @NotNull Builder builder(final @NotNull Plugin plugin) {
+  static @NonNull Builder builder(final @NonNull Plugin plugin) {
     return BungeeAudiencesImpl.builder(plugin);
   }
 
@@ -70,7 +70,7 @@ public interface BungeeAudiences extends AudienceProvider {
    * @return an audience
    * @since 4.0.0
    */
-  @NotNull Audience sender(final @NotNull CommandSender sender);
+  @NonNull Audience sender(final @NonNull CommandSender sender);
 
   /**
    * Gets an audience for a player.
@@ -79,7 +79,7 @@ public interface BungeeAudiences extends AudienceProvider {
    * @return an audience
    * @since 4.0.0
    */
-  @NotNull Audience player(final @NotNull ProxiedPlayer player);
+  @NonNull Audience player(final @NonNull ProxiedPlayer player);
 
   /**
    * Creates an audience based on a filter.
@@ -88,7 +88,7 @@ public interface BungeeAudiences extends AudienceProvider {
    * @return an audience
    * @since 4.0.0
    */
-  @NotNull Audience filter(final @NotNull Predicate<CommandSender> filter);
+  @NonNull Audience filter(final @NonNull Predicate<CommandSender> filter);
 
   /**
    * A builder for {@link BungeeAudiences}.

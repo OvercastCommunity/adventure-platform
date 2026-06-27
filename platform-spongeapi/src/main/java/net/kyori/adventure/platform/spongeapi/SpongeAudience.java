@@ -27,7 +27,7 @@ import java.util.Collection;
 import net.kyori.adventure.platform.facet.Facet;
 import net.kyori.adventure.platform.facet.FacetAudience;
 import net.kyori.adventure.platform.facet.FacetAudienceProvider;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 import org.spongepowered.api.effect.Viewer;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.text.channel.ChatTypeMessageReceiver;
@@ -65,7 +65,7 @@ final class SpongeAudience extends FacetAudience<MessageReceiver> {
     SpongeFacet.LocatablePointers::new
   );
 
-  SpongeAudience(final FacetAudienceProvider<?, ?> provider, final @NotNull Collection<MessageReceiver> viewers) {
+  SpongeAudience(final FacetAudienceProvider<?, ?> provider, final @NonNull Collection<MessageReceiver> viewers) {
     super(provider, viewers, CHAT, ACTION_BAR, TITLE, SOUND, null, BOOK, BOSS_BAR, TAB_LIST, POINTERS);
   }
 }

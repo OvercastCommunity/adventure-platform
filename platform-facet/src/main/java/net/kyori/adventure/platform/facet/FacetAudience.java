@@ -45,8 +45,8 @@ import net.kyori.adventure.text.flattener.ComponentFlattener;
 import net.kyori.adventure.title.Title;
 import net.kyori.adventure.title.TitlePart;
 import org.jetbrains.annotations.ApiStatus;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import static java.util.Objects.requireNonNull;
 
@@ -63,9 +63,9 @@ import static java.util.Objects.requireNonNull;
  */
 @ApiStatus.Internal
 public class FacetAudience<V> implements Audience, Closeable {
-  protected final @NotNull FacetAudienceProvider<V, FacetAudience<V>> provider;
+  protected final @NonNull FacetAudienceProvider<V, FacetAudience<V>> provider;
 
-  private final @NotNull Set<V> viewers;
+  private final @NonNull Set<V> viewers;
   private @Nullable V viewer;
   private volatile Pointers pointers; // lazy init
 
@@ -78,7 +78,7 @@ public class FacetAudience<V> implements Audience, Closeable {
   private final Facet.BossBar.@Nullable Builder<V, Facet.BossBar<V>> bossBar;
   private final @Nullable Map<BossBar, Facet.BossBar<V>> bossBars;
   private final Facet.@Nullable TabList<V, Object> tabList;
-  private final @NotNull Collection<? extends Facet.Pointers<V>> pointerProviders;
+  private final @NonNull Collection<? extends Facet.Pointers<V>> pointerProviders;
 
   /**
    * Create a new facet-based audience.
@@ -101,8 +101,8 @@ public class FacetAudience<V> implements Audience, Closeable {
     "rawtypes"
   }) // Without suppression, this constructor becomes unreadable
   public FacetAudience(
-    final @NotNull FacetAudienceProvider provider,
-    final @NotNull Collection<? extends V> viewers,
+    final @NonNull FacetAudienceProvider provider,
+    final @NonNull Collection<? extends V> viewers,
     final @Nullable Collection<? extends Facet.Chat> chat,
     final @Nullable Collection<? extends Facet.ActionBar> actionBar,
     final @Nullable Collection<? extends Facet.Title> title,
@@ -138,7 +138,7 @@ public class FacetAudience<V> implements Audience, Closeable {
    * @param viewer the viewer
    * @since 4.0.0
    */
-  public void addViewer(final @NotNull V viewer) {
+  public void addViewer(final @NonNull V viewer) {
     if (this.viewers.add(viewer) && this.viewer == null) {
       this.viewer = viewer;
       this.refresh();
@@ -151,7 +151,7 @@ public class FacetAudience<V> implements Audience, Closeable {
    * @param viewer the viewer to remove
    * @since 4.0.0
    */
-  public void removeViewer(final @NotNull V viewer) {
+  public void removeViewer(final @NonNull V viewer) {
     if (this.viewers.remove(viewer) && this.viewer == viewer) {
       this.viewer = this.viewers.isEmpty() ? null : this.viewers.iterator().next();
       this.refresh();
@@ -183,7 +183,7 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public void sendMessage(final @NotNull Component original) {
+  public void sendMessage(final @NonNull Component original) {
     if (this.chat == null) return;
 
     final Object message = this.createMessage(original, this.chat);
@@ -195,7 +195,7 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public void sendMessage(final @NotNull Component original, final ChatType.@NotNull Bound boundChatType) {
+  public void sendMessage(final @NonNull Component original, final ChatType.@NonNull Bound boundChatType) {
     if (this.chat == null) return;
     final Object message = this.createMessage(original, this.chat);
     if (message == null) return;
@@ -213,7 +213,7 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public void sendMessage(final @NotNull SignedMessage signedMessage, final ChatType.@NotNull Bound boundChatType) {
+  public void sendMessage(final @NonNull SignedMessage signedMessage, final ChatType.@NonNull Bound boundChatType) {
     if (this.chat == null) return;
 
     final Component content = signedMessage.unsignedContent() != null ? signedMessage.unsignedContent() : Component.text(signedMessage.message());
@@ -239,7 +239,7 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public void sendActionBar(final @NotNull Component original) {
+  public void sendActionBar(final @NonNull Component original) {
     if (this.actionBar == null) return;
 
     final Object message = this.createMessage(original, this.actionBar);
@@ -251,7 +251,7 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public void playSound(final net.kyori.adventure.sound.@NotNull Sound original) {
+  public void playSound(final net.kyori.adventure.sound.@NonNull Sound original) {
     if (this.sound == null) return;
 
     for (final V viewer : this.viewers) {
@@ -263,7 +263,7 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public void playSound(final @NotNull Sound sound, final Sound.@NotNull Emitter emitter) {
+  public void playSound(final @NonNull Sound sound, final Sound.@NonNull Emitter emitter) {
     if (this.entitySound == null) return;
     if (emitter == Sound.Emitter.self()) {
       for (final V viewer : this.viewers) {
@@ -282,7 +282,7 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public void playSound(final net.kyori.adventure.sound.@NotNull Sound original, final double x, final double y, final double z) {
+  public void playSound(final net.kyori.adventure.sound.@NonNull Sound original, final double x, final double y, final double z) {
     if (this.sound == null) return;
 
     final Object position = this.sound.createPosition(x, y, z);
@@ -292,7 +292,7 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public void stopSound(final @NotNull SoundStop original) {
+  public void stopSound(final @NonNull SoundStop original) {
     if (this.sound == null) return;
 
     for (final V viewer : this.viewers) {
@@ -301,7 +301,7 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public void openBook(final net.kyori.adventure.inventory.@NotNull Book original) {
+  public void openBook(final net.kyori.adventure.inventory.@NonNull Book original) {
     if (this.book == null) return;
 
     final String title = this.toPlain(original.title());
@@ -333,7 +333,7 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public void showTitle(final net.kyori.adventure.title.@NotNull Title original) {
+  public void showTitle(final net.kyori.adventure.title.@NonNull Title original) {
     if (this.title == null) return;
 
     final Object mainTitle = this.createMessage(original.title(), this.title);
@@ -358,16 +358,16 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public <T> void sendTitlePart(final @NotNull TitlePart<T> part, @NotNull final T value) {
+  public <T> void sendTitlePart(final @NonNull TitlePart<T> part, @NonNull final T value) {
     if (this.title == null) return;
 
     Objects.requireNonNull(value, "value");
     final Object collection = this.title.createTitleCollection();
     if (part == TitlePart.TITLE) {
-      final @Nullable Object message = this.createMessage((Component) value, this.title);
+      final Object message = this.createMessage((Component) value, this.title);
       if (message != null) this.title.contributeTitle(collection, message);
     } else if (part == TitlePart.SUBTITLE) {
-      final @Nullable Object message = this.createMessage((Component) value, this.title);
+      final Object message = this.createMessage((Component) value, this.title);
       if (message != null) this.title.contributeSubtitle(collection, message);
     } else if (part == TitlePart.TIMES) {
       final Title.Times times = (Title.Times) value;
@@ -408,7 +408,7 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public void showBossBar(final @NotNull BossBar bar) {
+  public void showBossBar(final @NonNull BossBar bar) {
     if (this.bossBar == null || this.bossBars == null) return;
 
     Facet.BossBar<V> listener;
@@ -434,7 +434,7 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public void hideBossBar(final @NotNull BossBar bar) {
+  public void hideBossBar(final @NonNull BossBar bar) {
     if (this.bossBars == null) return;
 
     final Facet.BossBar<V> listener = this.bossBars.get(bar);
@@ -451,7 +451,7 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public void sendPlayerListHeader(final @NotNull Component header) {
+  public void sendPlayerListHeader(final @NonNull Component header) {
     if (this.tabList != null) {
       final Object headerFormatted = this.createMessage(header, this.tabList);
       if (headerFormatted == null) return;
@@ -462,7 +462,7 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public void sendPlayerListFooter(final @NotNull Component footer) {
+  public void sendPlayerListFooter(final @NonNull Component footer) {
     if (this.tabList != null) {
       final Object footerFormatted = this.createMessage(footer, this.tabList);
       if (footerFormatted == null) return;
@@ -473,7 +473,7 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public void sendPlayerListHeaderAndFooter(final @NotNull Component header, final @NotNull Component footer) {
+  public void sendPlayerListHeaderAndFooter(final @NonNull Component header, final @NonNull Component footer) {
     if (this.tabList != null) {
       final Object headerFormatted = this.createMessage(header, this.tabList);
       final Object footerFormatted = this.createMessage(footer, this.tabList);
@@ -486,7 +486,7 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public @NotNull Pointers pointers() {
+  public @NonNull Pointers pointers() {
     if (this.pointers == null) {
       synchronized (this) {
         if (this.pointers == null) {
@@ -529,7 +529,7 @@ public class FacetAudience<V> implements Audience, Closeable {
     this.viewers.clear();
   }
 
-  private @Nullable Object createMessage(final @NotNull Component original, final Facet.@NotNull Message<V, Object> facet) {
+  private @Nullable Object createMessage(final @NonNull Component original, final Facet.@NonNull Message<V, Object> facet) {
     final Component message = this.provider.componentRenderer.render(original, this);
     final V viewer = this.viewer;
     return viewer == null ? null : facet.createMessage(viewer, message);

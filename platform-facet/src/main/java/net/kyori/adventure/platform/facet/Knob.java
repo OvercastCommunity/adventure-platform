@@ -27,8 +27,8 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Facet utilities and logging pipeline.
@@ -65,7 +65,7 @@ public final class Knob {
    * @return if the feature is enabled
    * @since 4.0.0
    */
-  public static boolean isEnabled(final @NotNull String key, final boolean defaultValue) {
+  public static boolean isEnabled(final @NonNull String key, final boolean defaultValue) {
     return System.getProperty(NAMESPACE + "." + key, Boolean.toString(defaultValue))
       .equalsIgnoreCase("true");
   }
@@ -78,7 +78,7 @@ public final class Knob {
    * @param arguments an array of arguments
    * @since 4.0.0
    */
-  public static void logError(final @Nullable Throwable error, final @NotNull String format, final @NotNull Object... arguments) {
+  public static void logError(final @Nullable Throwable error, final @NonNull String format, final @NonNull Object... arguments) {
     if (DEBUG) {
       ERR.accept(String.format(format, arguments), error);
     }
@@ -91,7 +91,7 @@ public final class Knob {
    * @param arguments an array of arguments
    * @since 4.0.0
    */
-  public static void logMessage(final @NotNull String format, final @NotNull Object... arguments) {
+  public static void logMessage(final @NonNull String format, final @NonNull Object... arguments) {
     if (DEBUG) {
       OUT.accept(String.format(format, arguments));
     }
@@ -104,7 +104,7 @@ public final class Knob {
    * @param value a value
    * @since 4.0.0
    */
-  public static void logUnsupported(final @NotNull Object facet, final @NotNull Object value) {
+  public static void logUnsupported(final @NonNull Object facet, final @NonNull Object value) {
     if (DEBUG && UNSUPPORTED.add(value)) {
       OUT.accept(String.format("Unsupported value '%s' for facet: %s", value, facet));
     }
