@@ -105,9 +105,9 @@ final class CraftBukkitAccess {
     static final @Nullable MethodHandle SERVER_LEVEL_GET_REGISTRY_ACCESS = searchMethod(CLASS_SERVER_LEVEL, Modifier.PUBLIC, "registryAccess", CLASS_REGISTRY_ACCESS);
     static final @Nullable MethodHandle LEVEL_GET_REGISTRY_ACCESS = searchMethod(CLASS_LEVEL, Modifier.PUBLIC, "registryAccess", CLASS_REGISTRY_ACCESS);
     static final @Nullable MethodHandle ACTUAL_GET_REGISTRY_ACCESS = SERVER_LEVEL_GET_REGISTRY_ACCESS == null ? LEVEL_GET_REGISTRY_ACCESS : SERVER_LEVEL_GET_REGISTRY_ACCESS;
-    static final @Nullable MethodHandle REGISTRY_ACCESS_GET_REGISTRY_OPTIONAL = searchMethod(CLASS_REGISTRY_ACCESS, Modifier.PUBLIC, "registry", Optional.class, CLASS_RESOURCE_KEY);
+    static final @Nullable MethodHandle REGISTRY_ACCESS_GET_REGISTRY_OPTIONAL = searchMethod(CLASS_REGISTRY_ACCESS, Modifier.PUBLIC, new String[]{"registry", "lookup"}, Optional.class, CLASS_RESOURCE_KEY);
     static final @Nullable MethodHandle REGISTRY_GET_OPTIONAL = searchMethod(CLASS_REGISTRY, Modifier.PUBLIC, "getOptional", Optional.class, CLASS_RESOURCE_LOCATION);
-    static final @Nullable MethodHandle REGISTRY_GET_HOLDER = searchMethod(CLASS_REGISTRY, Modifier.PUBLIC, "getHolder", Optional.class, CLASS_RESOURCE_LOCATION);
+    static final @Nullable MethodHandle REGISTRY_GET_HOLDER = searchMethod(CLASS_REGISTRY, Modifier.PUBLIC, new String[]{"getHolder", "get"}, Optional.class, CLASS_RESOURCE_LOCATION);
     static final @Nullable MethodHandle REGISTRY_GET_ID = searchMethod(CLASS_REGISTRY, Modifier.PUBLIC, "getId", int.class, Object.class);
     static final @Nullable MethodHandle DISGUISED_CHAT_PACKET_CONSTRUCTOR;
     static final @Nullable MethodHandle CHAT_TYPE_BOUND_NETWORK_CONSTRUCTOR;
@@ -123,7 +123,9 @@ final class CraftBukkitAccess {
 
       try {
         Class<?> classChatTypeBoundNetwork = findClass(findMcClassName("network.chat.ChatType$BoundNetwork"));
-        if (classChatTypeBoundNetwork == null) {
+        if (classChatTypeBoundNetwork != null) {
+          boundNetworkConstructor = findConstructor(classChatTypeBoundNetwork, int.class, CLASS_CHAT_COMPONENT, CLASS_CHAT_COMPONENT);
+        } else {
           final Class<?> parentClass = findClass(findMcClassName("network.chat.ChatMessageType"));
           if (parentClass != null) {
             for (final Class<?> childClass : parentClass.getClasses()) {
@@ -136,8 +138,10 @@ final class CraftBukkitAccess {
           }
         }
 
-        Class<?> classChatTypeBound = findClass(findMcClassName("network.chat.ChatType$BoundNetwork"));
-        if (classChatTypeBound == null) {
+        Class<?> classChatTypeBound = findClass(findMcClassName("network.chat.ChatType$Bound"));
+        if (classChatTypeBound != null) {
+          boundConstructor = findConstructor(classChatTypeBound, CLASS_HOLDER, CLASS_CHAT_COMPONENT, Optional.class);
+        } else {
           final Class<?> parentClass = findClass(findMcClassName("network.chat.ChatMessageType"));
           if (parentClass != null) {
             for (final Class<?> childClass : parentClass.getClasses()) {
@@ -179,7 +183,12 @@ final class CraftBukkitAccess {
     }
 
     static boolean isSupported() {
-      return ACTUAL_GET_REGISTRY_ACCESS != null && REGISTRY_ACCESS_GET_REGISTRY_OPTIONAL != null && REGISTRY_GET_OPTIONAL != null && (CHAT_TYPE_BOUND_NETWORK_CONSTRUCTOR != null || CHAT_TYPE_BOUND_CONSTRUCTOR != null) && DISGUISED_CHAT_PACKET_CONSTRUCTOR != null && CHAT_TYPE_RESOURCE_KEY != null;
+      return ACTUAL_GET_REGISTRY_ACCESS != null
+        && REGISTRY_ACCESS_GET_REGISTRY_OPTIONAL != null
+        && DISGUISED_CHAT_PACKET_CONSTRUCTOR != null
+        && CHAT_TYPE_RESOURCE_KEY != null
+        && ((CHAT_TYPE_BOUND_NETWORK_CONSTRUCTOR != null && REGISTRY_GET_OPTIONAL != null && REGISTRY_GET_ID != null)
+        || (CHAT_TYPE_BOUND_CONSTRUCTOR != null && REGISTRY_GET_HOLDER != null));
     }
   }
 

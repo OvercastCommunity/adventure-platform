@@ -336,7 +336,7 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
           boundNetwork = CraftBukkitAccess.Chat1_19_3.CHAT_TYPE_BOUND_CONSTRUCTOR.invoke(chatTypeHolder, nameComponent, Optional.ofNullable(targetComponent));
         }
 
-        this.sendMessage(viewer, CraftBukkitAccess.Chat1_19_3.DISGUISED_CHAT_PACKET_CONSTRUCTOR.invoke(message, boundNetwork));
+        super.sendMessage(viewer, CraftBukkitAccess.Chat1_19_3.DISGUISED_CHAT_PACKET_CONSTRUCTOR.invoke(message, boundNetwork));
       } catch (final Throwable error) {
         logError(error, "Failed to send a 1.19.3+ message: %s %s", message, boundChatType);
       }
@@ -371,7 +371,7 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
 
     protected void sendMessage(final @NonNull CommandSender viewer, final @NonNull Object message, final @Nullable Object messageType, final @NonNull UUID source) {
       try {
-        this.sendMessage(viewer, CHAT_PACKET_CONSTRUCTOR.invoke(message, messageType, source));
+        super.sendMessage(viewer, CHAT_PACKET_CONSTRUCTOR.invoke(message, messageType, source));
       } catch (final Throwable error) {
         logError(error, "Failed to invoke PacketPlayOutChat constructor: %s %s", message, String.valueOf(messageType));
       }
