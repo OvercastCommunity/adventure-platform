@@ -423,19 +423,20 @@ final class MinecraftReflection {
    * @param enumFallbackOrdinal an enum ordinal, when the name is not found
    * @return an enum value or {@code null} if not found
    */
-  @SuppressWarnings("unchecked")
   public static @Nullable Object findEnum(final @Nullable Class<?> enumClass, final @NonNull String enumName, final int enumFallbackOrdinal) {
     if (enumClass == null || !Enum.class.isAssignableFrom(enumClass)) {
       return null;
     }
 
-    try {
-      return Enum.valueOf(enumClass.asSubclass(Enum.class), enumName);
-    } catch (final IllegalArgumentException e) {
-      final Object[] constants = enumClass.getEnumConstants();
-      if (constants.length > enumFallbackOrdinal) {
-        return constants[enumFallbackOrdinal];
+    final Object[] constants = enumClass.getEnumConstants();
+    for (final Object constant : constants) {
+      if (((Enum<?>) constant).name().equals(enumName)) {
+        return constant;
       }
+    }
+
+    if (constants.length > enumFallbackOrdinal) {
+      return constants[enumFallbackOrdinal];
     }
 
     return null;

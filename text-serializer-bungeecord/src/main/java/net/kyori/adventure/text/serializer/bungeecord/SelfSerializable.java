@@ -30,6 +30,7 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import java.io.IOException;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A representation of a wrapper adapter, generally between and Adventure type and a native type.
@@ -54,7 +55,7 @@ interface SelfSerializable {
     }
 
     @Override
-    public <T> TypeAdapter<T> create(final Gson gson, final TypeToken<T> type) {
+    public <T> @Nullable TypeAdapter<T> create(final Gson gson, final TypeToken<T> type) {
       if (!SelfSerializable.class.isAssignableFrom(type.getRawType())) {
         return null;
       }

@@ -42,6 +42,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+import static java.util.Objects.requireNonNull;
 import static net.kyori.adventure.platform.bukkit.BukkitComponentSerializer.gson;
 import static net.kyori.adventure.platform.bukkit.BukkitComponentSerializer.legacy;
 import static net.kyori.adventure.platform.bukkit.MinecraftReflection.findClass;
@@ -66,7 +67,7 @@ class SpigotFacet<V extends CommandSender> extends FacetBase<V> {
   static final Class<?> BUNGEE_COMPONENT_TYPE = findClass("net.md_5.bungee.api.chat.BaseComponent");
 
   static class Message<V extends CommandSender> extends SpigotFacet<V> implements Facet.Message<V, BaseComponent[]> {
-    private static final BungeeComponentSerializer SERIALIZER = BungeeComponentSerializer.of(gson(), legacy());
+    private static final @NonNull BungeeComponentSerializer SERIALIZER = requireNonNull(BungeeComponentSerializer.of(gson(), legacy()), "serializer");
 
     protected Message(final @Nullable Class<? extends V> viewerClass) {
       super(viewerClass);

@@ -89,9 +89,11 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
   private final Function<V, UserConnection> connectionFunction;
   private final ProtocolVersion hexColorProtocol;
   private final @Nullable ProtocolVersion minProtocol;
+  protected final @NonNull Class<? extends V> viaViewerClass;
 
   public ViaFacet(final @NonNull Class<? extends V> viewerClass, final @NonNull Function<V, UserConnection> connectionFunction, final String minProtocol) {
     super(viewerClass);
+    this.viaViewerClass = viewerClass;
     this.connectionFunction = connectionFunction;
     this.hexColorProtocol = ProtocolVersion.getClosest(VERSION_HEX_COLOR);
     this.minProtocol = ProtocolVersion.getClosest(minProtocol);
@@ -195,8 +197,8 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
       return element;
     }
 
-    public @NonNull JsonElement parse(final @NonNull V viewer, final @NonNull String message) {
-      final JsonElement element = JsonParser.parseString(message);
+    public @NonNull JsonElement parse(final @NonNull V viewer, final @Nullable String message) {
+      final JsonElement element = JsonParser.parseString(message == null ? GsonComponentSerializer.gson().serialize(Component.empty()) : message);
       if (this.rewriteLegacyTranslations
         && VERSION_TRANSLATION_KEYS != null
         && VERSION_TRANSLATION_KEYS.isKnown()
@@ -402,7 +404,7 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
 
       @Override
       public Facet.@NonNull BossBar<V> createBossBar(final @NonNull Collection<V> viewer) {
-        return new ViaFacet.BossBar<>("1_15_2", "1_16", this.viewerClass, this::findConnection, viewer);
+        return new ViaFacet.BossBar<>("1_15_2", "1_16", this.viaViewerClass, this::findConnection, viewer);
       }
     }
 
@@ -413,7 +415,7 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
 
       @Override
       public Facet.@NonNull BossBar<V> createBossBar(final @NonNull Collection<V> viewer) {
-        return new ViaFacet.BossBar<>("1_8", "1_9", this.viewerClass, this::findConnection, viewer);
+        return new ViaFacet.BossBar<>("1_8", "1_9", this.viaViewerClass, this::findConnection, viewer);
       }
     }
 

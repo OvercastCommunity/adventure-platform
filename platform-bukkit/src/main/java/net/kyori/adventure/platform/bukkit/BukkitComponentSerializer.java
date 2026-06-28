@@ -43,6 +43,7 @@ import static net.kyori.adventure.platform.bukkit.MinecraftReflection.findEnum;
  *
  * @since 4.0.0
  */
+@SuppressWarnings("deprecation")
 public final class BukkitComponentSerializer {
   private BukkitComponentSerializer() {
   }

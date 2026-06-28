@@ -355,8 +355,8 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
     }
 
     @Override
-    public void sendMessage(final @NonNull CommandSender viewer, final @NonNull Object message) {
-      this.sendMessage(viewer, message, MESSAGE_TYPE_SYSTEM, Identity.nil().uuid());
+    public void sendMessage(final @NonNull CommandSender viewer, final @Nullable Object message) {
+      if (message != null) this.sendMessage(viewer, message, MESSAGE_TYPE_SYSTEM, Identity.nil().uuid());
     }
 
     @Override
@@ -373,7 +373,7 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
       try {
         this.sendMessage(viewer, CHAT_PACKET_CONSTRUCTOR.invoke(message, messageType, source));
       } catch (final Throwable error) {
-        logError(error, "Failed to invoke PacketPlayOutChat constructor: %s %s", message, messageType);
+        logError(error, "Failed to invoke PacketPlayOutChat constructor: %s %s", message, String.valueOf(messageType));
       }
     }
   }
@@ -829,6 +829,7 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public void openBook(final @NonNull Player viewer, final @NonNull ItemStack book) {
       final PlayerInventory inventory = viewer.getInventory();
       final ItemStack current = inventory.getItemInHand();

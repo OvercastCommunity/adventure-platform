@@ -366,7 +366,7 @@ public interface Facet<V> {
      * Finds a viewer's position.
      *
      * @param viewer a viewer
-     * @return a position or {@code null} if cannot be found
+     * @return a position or {@code null} if none can be found
      * @since 4.0.0
      */
     @Nullable P createPosition(final @NonNull V viewer);
@@ -374,7 +374,7 @@ public interface Facet<V> {
     /**
      * Creates a position.
      *
-     * @param x a x coordinate
+     * @param x an x coordinate
      * @param y a y coordinate
      * @param z a z coordinate
      * @return a position
@@ -420,7 +420,7 @@ public interface Facet<V> {
    */
   interface EntitySound<V, M> extends Facet<V> {
     /**
-     * Create a sound packet following the viewer themself.
+     * Create a sound packet following the viewer themselves.
      *
      * @param viewer the receiver of the sound
      * @param sound the sound to play
@@ -763,8 +763,8 @@ public interface Facet<V> {
      * Update the tab list header and footer.
      *
      * @param viewer receiving the tab list update
-     * @param header header, null if should be left unchanged
-     * @param footer footer, null if should be left unchanged
+     * @param header header, null if unchanged
+     * @param footer footer, null if unchanged
      * @since 4.0.0
      */
     void send(final V viewer, final @Nullable M header, final @Nullable M footer);

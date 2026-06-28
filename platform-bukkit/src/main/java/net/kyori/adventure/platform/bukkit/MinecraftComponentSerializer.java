@@ -109,178 +109,249 @@ public final class MinecraftComponentSerializer implements ComponentSerializer<C
   private static final @Nullable MethodHandle PARSE_JSON = findMethod(CLASS_JSON_PARSER, "parse", CLASS_JSON_ELEMENT, String.class);
   private static final @Nullable MethodHandle GET_REGISTRY = findStaticMethod(CLASS_CRAFT_REGISTRY, "getMinecraftRegistry", CLASS_REGISTRY_ACCESS);
   private static final AtomicReference<RuntimeException> INITIALIZATION_ERROR = new AtomicReference<>(new UnsupportedOperationException());
-  private static final Object JSON_OPS_INSTANCE;
-  private static final Object JSON_PARSER_INSTANCE;
-  private static final Object MC_TEXT_GSON;
-  private static final Object REGISTRY_ACCESS;
-  private static final MethodHandle TEXT_SERIALIZER_DESERIALIZE;
-  private static final MethodHandle TEXT_SERIALIZER_SERIALIZE;
-  private static final MethodHandle TEXT_SERIALIZER_DESERIALIZE_TREE;
-  private static final MethodHandle TEXT_SERIALIZER_SERIALIZE_TREE;
-  private static final MethodHandle COMPONENTSERIALIZATION_CODEC_ENCODE;
-  private static final MethodHandle COMPONENTSERIALIZATION_CODEC_DECODE;
-  private static final MethodHandle CREATE_SERIALIZATION_CONTEXT;
+  private static final @Nullable Object JSON_OPS_INSTANCE;
+  private static final @Nullable Object JSON_PARSER_INSTANCE;
+  private static final @Nullable Object MC_TEXT_GSON;
+  private static final @Nullable Object REGISTRY_ACCESS;
+  private static final @Nullable MethodHandle TEXT_SERIALIZER_DESERIALIZE;
+  private static final @Nullable MethodHandle TEXT_SERIALIZER_SERIALIZE;
+  private static final @Nullable MethodHandle TEXT_SERIALIZER_DESERIALIZE_TREE;
+  private static final @Nullable MethodHandle TEXT_SERIALIZER_SERIALIZE_TREE;
+  private static final @Nullable MethodHandle COMPONENTSERIALIZATION_CODEC_ENCODE;
+  private static final @Nullable MethodHandle COMPONENTSERIALIZATION_CODEC_DECODE;
+  private static final @Nullable MethodHandle CREATE_SERIALIZATION_CONTEXT;
 
-  static {
-    Object gson = null;
-    Object jsonOpsInstance = null;
-    Object jsonParserInstance = null;
-    Object registryAccessInstance = null;
-    MethodHandle textSerializerDeserialize = null;
-    MethodHandle textSerializerSerialize = null;
-    MethodHandle textSerializerDeserializeTree = null;
-    MethodHandle textSerializerSerializeTree = null;
-    MethodHandle codecEncode = null;
-    MethodHandle codecDecode = null;
-    MethodHandle createContext = null;
+  private static final class InitializationState {
+    @Nullable Object gson;
+    @Nullable Object jsonOpsInstance;
+    @Nullable Object jsonParserInstance;
+    @Nullable Object registryAccessInstance;
+    @Nullable MethodHandle textSerializerDeserialize;
+    @Nullable MethodHandle textSerializerSerialize;
+    @Nullable MethodHandle textSerializerDeserializeTree;
+    @Nullable MethodHandle textSerializerSerializeTree;
+    @Nullable MethodHandle codecEncode;
+    @Nullable MethodHandle codecDecode;
+    @Nullable MethodHandle createContext;
+  }
 
+  private static InitializationState initialize() {
+    final InitializationState state = new InitializationState();
     try {
-      if (CLASS_JSON_OPS != null) {
-        final Field instanceField = CLASS_JSON_OPS.getField("INSTANCE");
-        instanceField.setAccessible(true);
-        jsonOpsInstance = instanceField.get(null);
-      }
-      if (CLASS_JSON_PARSER != null) {
-        jsonParserInstance = CLASS_JSON_PARSER.getDeclaredConstructor().newInstance();
-      }
-      if (CLASS_CHAT_COMPONENT != null) {
-        final Object registryAccess = GET_REGISTRY != null ? GET_REGISTRY.invoke() : null;
-        registryAccessInstance = registryAccess;
-        // Chat serializer //
-        final Class<?> chatSerializerClass = Arrays.stream(CLASS_CHAT_COMPONENT.getClasses())
-          .filter(c -> {
-            if (CLASS_JSON_DESERIALIZER != null) {
-              return CLASS_JSON_DESERIALIZER.isAssignableFrom(c);
-            } else {
-              for (final Class<?> itf : c.getInterfaces()) {
-                if (itf.getSimpleName().equals("JsonDeserializer")) {
-                  return true;
-                }
-              }
-              return false;
-            }
-          })
-          .findAny()
-          .orElse(findNmsClass("ChatSerializer")); // 1.7.10 compat
-        if (chatSerializerClass != null) {
-          final Field gsonField = Arrays.stream(chatSerializerClass.getDeclaredFields())
-            .filter(m -> Modifier.isStatic(m.getModifiers()))
-            .filter(m -> m.getType().equals(Gson.class))
-            .findFirst()
-            .orElse(null);
-          if (gsonField != null) {
-            gsonField.setAccessible(true);
-            gson = gsonField.get(null);
-          }
-        }
-        final List<Class<?>> candidates = new ArrayList<>();
-        if (chatSerializerClass != null) {
-          candidates.add(chatSerializerClass);
-        }
-        candidates.addAll(Arrays.asList(CLASS_CHAT_COMPONENT.getClasses()));
-        for (final Class<?> serializerClass : candidates) {
-          final Method[] declaredMethods = serializerClass.getDeclaredMethods();
-          final Method deserialize = Arrays.stream(declaredMethods)
-            .filter(m -> Modifier.isStatic(m.getModifiers()))
-            .filter(m -> CLASS_CHAT_COMPONENT.isAssignableFrom(m.getReturnType()))
-            .filter(m -> m.getParameterCount() == 1 && m.getParameterTypes()[0].equals(String.class))
-            .min(Comparator.comparing(Method::getName)) // prefer the #a method
-            .orElse(null);
-          final Method serialize = Arrays.stream(declaredMethods)
-            .filter(m -> Modifier.isStatic(m.getModifiers()))
-            .filter(m -> m.getReturnType().equals(String.class))
-            .filter(m -> m.getParameterCount() == 1 && CLASS_CHAT_COMPONENT.isAssignableFrom(m.getParameterTypes()[0]))
-            .findFirst()
-            .orElse(null);
-          final Method deserializeTree = Arrays.stream(declaredMethods)
-            .filter(m -> Modifier.isStatic(m.getModifiers()))
-            .filter(m -> CLASS_CHAT_COMPONENT.isAssignableFrom(m.getReturnType()))
-            .filter(m -> m.getParameterCount() == 1 && m.getParameterTypes()[0].equals(CLASS_JSON_ELEMENT))
-            .findFirst()
-            .orElse(null);
-          final Method serializeTree = Arrays.stream(declaredMethods)
-            .filter(m -> Modifier.isStatic(m.getModifiers()))
-            .filter(m -> m.getReturnType().equals(CLASS_JSON_ELEMENT))
-            .filter(m -> m.getParameterCount() == 1 && CLASS_CHAT_COMPONENT.isAssignableFrom(m.getParameterTypes()[0]))
-            .findFirst()
-            .orElse(null);
-          final Method deserializeTreeWithRegistryAccess = Arrays.stream(declaredMethods)
-            .filter(m -> Modifier.isStatic(m.getModifiers()))
-            .filter(m -> CLASS_CHAT_COMPONENT.isAssignableFrom(m.getReturnType()))
-            .filter(m -> m.getParameterCount() == 2)
-            .filter(m -> m.getParameterTypes()[0].equals(CLASS_JSON_ELEMENT))
-            .filter(m -> m.getParameterTypes()[1].isInstance(registryAccess))
-            .findFirst()
-            .orElse(null);
-          final Method serializeTreeWithRegistryAccess = Arrays.stream(declaredMethods)
-            .filter(m -> Modifier.isStatic(m.getModifiers()))
-            .filter(m -> m.getReturnType().equals(CLASS_JSON_ELEMENT))
-            .filter(m -> m.getParameterCount() == 2)
-            .filter(m -> CLASS_CHAT_COMPONENT.isAssignableFrom(m.getParameterTypes()[0]))
-            .filter(m -> m.getParameterTypes()[1].isInstance(registryAccess))
-            .findFirst()
-            .orElse(null);
-          if (deserialize != null) {
-            textSerializerDeserialize = lookup().unreflect(deserialize);
-          }
-          if (serialize != null) {
-            textSerializerSerialize = lookup().unreflect(serialize);
-          }
-          if (deserializeTree != null) {
-            textSerializerDeserializeTree = lookup().unreflect(deserializeTree);
-          } else if (deserializeTreeWithRegistryAccess != null) {
-            deserializeTreeWithRegistryAccess.setAccessible(true);
-            textSerializerDeserializeTree = insertArguments(lookup().unreflect(deserializeTreeWithRegistryAccess), 1, registryAccess);
-          }
-          if (serializeTree != null) {
-            textSerializerSerializeTree = lookup().unreflect(serializeTree);
-          } else if (serializeTreeWithRegistryAccess != null) {
-            serializeTreeWithRegistryAccess.setAccessible(true);
-            textSerializerSerializeTree = insertArguments(lookup().unreflect(serializeTreeWithRegistryAccess), 1, registryAccess);
-          }
-        }
-        if (registryAccess != null && CLASS_HOLDERLOOKUP_PROVIDER != null) {
-          for (final Method m : CLASS_HOLDERLOOKUP_PROVIDER.getDeclaredMethods()) {
-            m.setAccessible(true);
-            if (m.getParameterCount() == 1 && m.getParameterTypes()[0].getSimpleName().equals("DynamicOps") && m.getReturnType().getSimpleName().contains("RegistryOps")) {
-              createContext = lookup().unreflect(m);
-              break;
-            }
-          }
-        }
-        if (CLASS_COMPONENT_SERIALIZATION != null) {
-          for (final Field f : CLASS_COMPONENT_SERIALIZATION.getDeclaredFields()) {
-            if (Modifier.isStatic(f.getModifiers()) && f.getType().getSimpleName().equals("Codec")) {
-              f.setAccessible(true);
-              final Object codecInstance = f.get(null);
-              final Class<?> codecClass = codecInstance.getClass();
-              for (final Method m : codecClass.getDeclaredMethods()) {
-                if (m.getName().equals("decode")) {
-                  codecDecode = lookup().unreflect(m).bindTo(codecInstance);
-                } else if (m.getName().equals("encode")) {
-                  codecEncode = lookup().unreflect(m).bindTo(codecInstance);
-                }
-              }
-              break;
-            }
-          }
-        }
+      initializeJson(state);
+      final Class<?> chatComponentClass = CLASS_CHAT_COMPONENT;
+      if (chatComponentClass != null) {
+        initializeChat(state, chatComponentClass);
       }
     } catch (final Throwable error) {
       INITIALIZATION_ERROR.set(new UnsupportedOperationException("Error occurred during initialization", error));
     }
 
-    MC_TEXT_GSON = gson;
-    JSON_OPS_INSTANCE = jsonOpsInstance;
-    JSON_PARSER_INSTANCE = jsonParserInstance;
-    TEXT_SERIALIZER_DESERIALIZE = textSerializerDeserialize;
-    TEXT_SERIALIZER_SERIALIZE = textSerializerSerialize;
-    TEXT_SERIALIZER_DESERIALIZE_TREE = textSerializerDeserializeTree;
-    TEXT_SERIALIZER_SERIALIZE_TREE = textSerializerSerializeTree;
-    COMPONENTSERIALIZATION_CODEC_ENCODE = codecEncode;
-    COMPONENTSERIALIZATION_CODEC_DECODE = codecDecode;
-    CREATE_SERIALIZATION_CONTEXT = createContext;
-    REGISTRY_ACCESS = registryAccessInstance;
+    return state;
+  }
+
+  private static void initializeJson(final InitializationState state) throws ReflectiveOperationException {
+    if (CLASS_JSON_OPS != null) {
+      final Field instanceField = CLASS_JSON_OPS.getField("INSTANCE");
+      instanceField.setAccessible(true);
+      state.jsonOpsInstance = instanceField.get(null);
+    }
+    if (CLASS_JSON_PARSER != null) {
+      state.jsonParserInstance = CLASS_JSON_PARSER.getDeclaredConstructor().newInstance();
+    }
+  }
+
+  private static void initializeChat(final InitializationState state, final Class<?> chatComponentClass) throws Throwable {
+    final Object registryAccess = GET_REGISTRY != null ? GET_REGISTRY.invoke() : null;
+    state.registryAccessInstance = registryAccess;
+
+    final @Nullable Class<?> chatSerializerClass = findChatSerializerClass(chatComponentClass);
+    state.gson = findGson(chatSerializerClass);
+    initializeSerializerMethods(state, chatComponentClass, registryAccess, chatSerializerClass);
+    state.createContext = findSerializationContext(registryAccess);
+    initializeCodecMethods(state);
+  }
+
+  private static @Nullable Class<?> findChatSerializerClass(final Class<?> chatComponentClass) {
+    return Arrays.stream(chatComponentClass.getClasses())
+      .filter(MinecraftComponentSerializer::isJsonDeserializer)
+      .findAny()
+      .orElse(findNmsClass("ChatSerializer")); // 1.7.10 compat
+  }
+
+  private static boolean isJsonDeserializer(final Class<?> candidate) {
+    if (CLASS_JSON_DESERIALIZER != null) {
+      return CLASS_JSON_DESERIALIZER.isAssignableFrom(candidate);
+    }
+    for (final Class<?> itf : candidate.getInterfaces()) {
+      if (itf.getSimpleName().equals("JsonDeserializer")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static @Nullable Object findGson(final @Nullable Class<?> chatSerializerClass) throws IllegalAccessException {
+    if (chatSerializerClass == null) return null;
+
+    final Field gsonField = Arrays.stream(chatSerializerClass.getDeclaredFields())
+      .filter(m -> Modifier.isStatic(m.getModifiers()))
+      .filter(m -> m.getType().equals(Gson.class))
+      .findFirst()
+      .orElse(null);
+    if (gsonField == null) return null;
+
+    gsonField.setAccessible(true);
+    return gsonField.get(null);
+  }
+
+  private static void initializeSerializerMethods(final InitializationState state, final Class<?> chatComponentClass, final @Nullable Object registryAccess, final @Nullable Class<?> chatSerializerClass) throws IllegalAccessException {
+    final List<Class<?>> candidates = new ArrayList<>();
+    if (chatSerializerClass != null) {
+      candidates.add(chatSerializerClass);
+    }
+    candidates.addAll(Arrays.asList(chatComponentClass.getClasses()));
+
+    for (final Class<?> serializerClass : candidates) {
+      initializeSerializerMethods(state, chatComponentClass, registryAccess, serializerClass.getDeclaredMethods());
+    }
+  }
+
+  private static void initializeSerializerMethods(final InitializationState state, final Class<?> chatComponentClass, final @Nullable Object registryAccess, final Method[] declaredMethods) throws IllegalAccessException {
+    final Method deserialize = findDeserializeMethod(chatComponentClass, declaredMethods);
+    final Method serialize = findSerializeMethod(chatComponentClass, declaredMethods);
+    final Method deserializeTree = findDeserializeTreeMethod(chatComponentClass, declaredMethods);
+    final Method serializeTree = findSerializeTreeMethod(chatComponentClass, declaredMethods);
+    final Method deserializeTreeWithRegistryAccess = findDeserializeTreeWithRegistryAccessMethod(chatComponentClass, declaredMethods, registryAccess);
+    final Method serializeTreeWithRegistryAccess = findSerializeTreeWithRegistryAccessMethod(chatComponentClass, declaredMethods, registryAccess);
+
+    if (deserialize != null) {
+      state.textSerializerDeserialize = lookup().unreflect(deserialize);
+    }
+    if (serialize != null) {
+      state.textSerializerSerialize = lookup().unreflect(serialize);
+    }
+    if (deserializeTree != null) {
+      state.textSerializerDeserializeTree = lookup().unreflect(deserializeTree);
+    } else if (deserializeTreeWithRegistryAccess != null) {
+      deserializeTreeWithRegistryAccess.setAccessible(true);
+      state.textSerializerDeserializeTree = insertArguments(lookup().unreflect(deserializeTreeWithRegistryAccess), 1, registryAccess);
+    }
+    if (serializeTree != null) {
+      state.textSerializerSerializeTree = lookup().unreflect(serializeTree);
+    } else if (serializeTreeWithRegistryAccess != null) {
+      serializeTreeWithRegistryAccess.setAccessible(true);
+      state.textSerializerSerializeTree = insertArguments(lookup().unreflect(serializeTreeWithRegistryAccess), 1, registryAccess);
+    }
+  }
+
+  private static @Nullable Method findDeserializeMethod(final Class<?> chatComponentClass, final Method[] methods) {
+    return Arrays.stream(methods)
+      .filter(m -> Modifier.isStatic(m.getModifiers()))
+      .filter(m -> chatComponentClass.isAssignableFrom(m.getReturnType()))
+      .filter(m -> m.getParameterCount() == 1 && m.getParameterTypes()[0].equals(String.class))
+      .min(Comparator.comparing(Method::getName)) // prefer the #a method
+      .orElse(null);
+  }
+
+  private static @Nullable Method findSerializeMethod(final Class<?> chatComponentClass, final Method[] methods) {
+    return Arrays.stream(methods)
+      .filter(m -> Modifier.isStatic(m.getModifiers()))
+      .filter(m -> m.getReturnType().equals(String.class))
+      .filter(m -> m.getParameterCount() == 1 && chatComponentClass.isAssignableFrom(m.getParameterTypes()[0]))
+      .findFirst()
+      .orElse(null);
+  }
+
+  private static @Nullable Method findDeserializeTreeMethod(final Class<?> chatComponentClass, final Method[] methods) {
+    return Arrays.stream(methods)
+      .filter(m -> Modifier.isStatic(m.getModifiers()))
+      .filter(m -> chatComponentClass.isAssignableFrom(m.getReturnType()))
+      .filter(m -> m.getParameterCount() == 1 && m.getParameterTypes()[0].equals(CLASS_JSON_ELEMENT))
+      .findFirst()
+      .orElse(null);
+  }
+
+  private static @Nullable Method findSerializeTreeMethod(final Class<?> chatComponentClass, final Method[] methods) {
+    return Arrays.stream(methods)
+      .filter(m -> Modifier.isStatic(m.getModifiers()))
+      .filter(m -> m.getReturnType().equals(CLASS_JSON_ELEMENT))
+      .filter(m -> m.getParameterCount() == 1 && chatComponentClass.isAssignableFrom(m.getParameterTypes()[0]))
+      .findFirst()
+      .orElse(null);
+  }
+
+  private static @Nullable Method findDeserializeTreeWithRegistryAccessMethod(final Class<?> chatComponentClass, final Method[] methods, final @Nullable Object registryAccess) {
+    return Arrays.stream(methods)
+      .filter(m -> Modifier.isStatic(m.getModifiers()))
+      .filter(m -> chatComponentClass.isAssignableFrom(m.getReturnType()))
+      .filter(m -> m.getParameterCount() == 2)
+      .filter(m -> m.getParameterTypes()[0].equals(CLASS_JSON_ELEMENT))
+      .filter(m -> m.getParameterTypes()[1].isInstance(registryAccess))
+      .findFirst()
+      .orElse(null);
+  }
+
+  private static @Nullable Method findSerializeTreeWithRegistryAccessMethod(final Class<?> chatComponentClass, final Method[] methods, final @Nullable Object registryAccess) {
+    return Arrays.stream(methods)
+      .filter(m -> Modifier.isStatic(m.getModifiers()))
+      .filter(m -> m.getReturnType().equals(CLASS_JSON_ELEMENT))
+      .filter(m -> m.getParameterCount() == 2)
+      .filter(m -> chatComponentClass.isAssignableFrom(m.getParameterTypes()[0]))
+      .filter(m -> m.getParameterTypes()[1].isInstance(registryAccess))
+      .findFirst()
+      .orElse(null);
+  }
+
+  private static @Nullable MethodHandle findSerializationContext(final @Nullable Object registryAccess) throws IllegalAccessException {
+    if (registryAccess == null || CLASS_HOLDERLOOKUP_PROVIDER == null) return null;
+
+    for (final Method m : CLASS_HOLDERLOOKUP_PROVIDER.getDeclaredMethods()) {
+      m.setAccessible(true);
+      if (m.getParameterCount() == 1 && m.getParameterTypes()[0].getSimpleName().equals("DynamicOps") && m.getReturnType().getSimpleName().contains("RegistryOps")) {
+        return lookup().unreflect(m);
+      }
+    }
+    return null;
+  }
+
+  private static void initializeCodecMethods(final InitializationState state) throws IllegalAccessException {
+    if (CLASS_COMPONENT_SERIALIZATION == null) return;
+
+    for (final Field f : CLASS_COMPONENT_SERIALIZATION.getDeclaredFields()) {
+      if (Modifier.isStatic(f.getModifiers()) && f.getType().getSimpleName().equals("Codec")) {
+        initializeCodecMethods(state, f);
+        return;
+      }
+    }
+  }
+
+  private static void initializeCodecMethods(final InitializationState state, final Field codecField) throws IllegalAccessException {
+    codecField.setAccessible(true);
+    final Object codecInstance = codecField.get(null);
+    final Class<?> codecClass = codecInstance.getClass();
+    for (final Method m : codecClass.getDeclaredMethods()) {
+      if (m.getName().equals("decode")) {
+        state.codecDecode = lookup().unreflect(m).bindTo(codecInstance);
+      } else if (m.getName().equals("encode")) {
+        state.codecEncode = lookup().unreflect(m).bindTo(codecInstance);
+      }
+    }
+  }
+
+  static {
+    final InitializationState state = initialize();
+    MC_TEXT_GSON = state.gson;
+    JSON_OPS_INSTANCE = state.jsonOpsInstance;
+    JSON_PARSER_INSTANCE = state.jsonParserInstance;
+    TEXT_SERIALIZER_DESERIALIZE = state.textSerializerDeserialize;
+    TEXT_SERIALIZER_SERIALIZE = state.textSerializerSerialize;
+    TEXT_SERIALIZER_DESERIALIZE_TREE = state.textSerializerDeserializeTree;
+    TEXT_SERIALIZER_SERIALIZE_TREE = state.textSerializerSerializeTree;
+    COMPONENTSERIALIZATION_CODEC_ENCODE = state.codecEncode;
+    COMPONENTSERIALIZATION_CODEC_DECODE = state.codecDecode;
+    CREATE_SERIALIZATION_CONTEXT = state.createContext;
+    REGISTRY_ACCESS = state.registryAccessInstance;
   }
 
   private static final boolean SUPPORTED = MC_TEXT_GSON != null || (TEXT_SERIALIZER_DESERIALIZE != null && TEXT_SERIALIZER_SERIALIZE != null) || (TEXT_SERIALIZER_DESERIALIZE_TREE != null && TEXT_SERIALIZER_SERIALIZE_TREE != null) || (COMPONENTSERIALIZATION_CODEC_ENCODE != null && COMPONENTSERIALIZATION_CODEC_DECODE != null && CREATE_SERIALIZATION_CONTEXT != null && JSON_OPS_INSTANCE != null);

@@ -347,8 +347,8 @@ public class FacetAudience<V> implements Audience, Closeable {
     if (inTicks != -1 || stayTicks != -1 || outTicks != -1) {
       this.title.contributeTimes(collection, inTicks, stayTicks, outTicks);
     }
-    this.title.contributeSubtitle(collection, subTitle);
-    this.title.contributeTitle(collection, mainTitle);
+    if (subTitle != null) this.title.contributeSubtitle(collection, subTitle);
+    if (mainTitle != null) this.title.contributeTitle(collection, mainTitle);
     final Object title = this.title.completeTitle(collection);
     if (title == null) return;
 

@@ -1,6 +1,6 @@
 dependencies {
-  compileOnlyApi 'com.viaversion:viaversion-api:5.9.1'
-  compileOnly 'com.google.errorprone:error_prone_annotations:2.41.0'
+  compileOnlyApi 'com.viaversion:viaversion-api:5.0.0'
+  compileOnly 'org.checkerframework:checker-qual:4.2.0'
   implementation project(':adventure-platform-facet')
   implementation("net.kyori:adventure-text-serializer-gson:${rootProject.adventure}") {
     exclude group: "com.google.code.gson"

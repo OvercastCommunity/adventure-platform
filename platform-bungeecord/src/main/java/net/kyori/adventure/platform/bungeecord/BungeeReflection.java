@@ -67,7 +67,7 @@ final class BungeeReflection {
    * @param parameters  The parameter types of the method.
    * @return A {@link MethodHandle} for the specified method, or {@code null} if the method cannot be found or if any parameter is {@code null}.
    */
-  public static MethodHandle findMethod(final @Nullable Class<?> holderClass, final String methodName, final Class<?> returnType, final Class<?>... parameters) {
+  public static @Nullable MethodHandle findMethod(final @Nullable Class<?> holderClass, final String methodName, final @Nullable Class<?> returnType, final Class<?>... parameters) {
     if (holderClass == null || returnType == null) return null;
     for (final Class<?> parameter : parameters) {
       if (parameter == null) return null;

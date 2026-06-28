@@ -34,6 +34,7 @@ import net.kyori.adventure.text.serializer.json.JSONOptions;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.md_5.bungee.api.chat.BaseComponent;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import static java.util.Objects.requireNonNull;
 
@@ -98,7 +99,7 @@ public final class BungeeComponentSerializer implements ComponentSerializer<Comp
    * @return a new serializer
    * @since 4.0.0
    */
-  public static BungeeComponentSerializer of(final GsonComponentSerializer serializer, final LegacyComponentSerializer legacySerializer) {
+  public static @Nullable BungeeComponentSerializer of(final @Nullable GsonComponentSerializer serializer, final @Nullable LegacyComponentSerializer legacySerializer) {
     if (serializer == null || legacySerializer == null) return null;
     return new BungeeComponentSerializer(serializer, legacySerializer);
   }
@@ -157,7 +158,7 @@ public final class BungeeComponentSerializer implements ComponentSerializer<Comp
     if (SUPPORTED) {
       return new BaseComponent[]{new AdapterComponent(component)};
     } else {
-      return net.md_5.bungee.chat.ComponentSerializer.parse(this.serializer.serialize(component));
+      return requireNonNull(net.md_5.bungee.chat.ComponentSerializer.parse(this.serializer.serialize(component)), "serialized component");
     }
   }
 
