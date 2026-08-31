@@ -114,11 +114,8 @@ public class FacetAudience<V> implements Audience, Closeable {
     final @Nullable Collection<? extends Facet.Pointers> pointerProviders
   ) {
     this.provider = requireNonNull(provider, "audience provider");
-    this.viewers = new CopyOnWriteArraySet<>();
-    for (final V viewer : requireNonNull(viewers, "viewers")) {
-      this.addViewer(viewer);
-    }
-    this.refresh();
+    this.viewers = new CopyOnWriteArraySet<>(requireNonNull(viewers, "viewers"));
+    this.viewer = this.firstViewer();
     this.chat = Facet.of(chat, this.viewer);
     this.actionBar = Facet.of(actionBar, this.viewer);
     this.title = Facet.of(title, this.viewer);
@@ -130,6 +127,10 @@ public class FacetAudience<V> implements Audience, Closeable {
       this.bossBar == null ? null : Collections.synchronizedMap(new IdentityHashMap<>(4));
     this.tabList = Facet.of(tabList, this.viewer);
     this.pointerProviders = pointerProviders == null ? Collections.emptyList() : (Collection) pointerProviders;
+  }
+
+  private @Nullable V firstViewer() {
+    return this.viewers.isEmpty() ? null : this.viewers.iterator().next();
   }
 
   /**
@@ -153,7 +154,7 @@ public class FacetAudience<V> implements Audience, Closeable {
    */
   public void removeViewer(final @NonNull V viewer) {
     if (this.viewers.remove(viewer) && this.viewer == viewer) {
-      this.viewer = this.viewers.isEmpty() ? null : this.viewers.iterator().next();
+      this.viewer = this.firstViewer();
       this.refresh();
     }
 

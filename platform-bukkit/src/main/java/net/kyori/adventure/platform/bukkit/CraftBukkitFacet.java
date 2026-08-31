@@ -229,28 +229,33 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
     findMcClassName("network.chat.ChatMessageType"),
     findMcClassName("network.chat.ChatType")
   );
+  private static final byte POSITION_CHAT = 0;
+  private static final byte POSITION_SYSTEM = 1;
+  private static final byte POSITION_ACTION_BAR = 2;
+
   private static final @Nullable Object MESSAGE_TYPE_CHAT;
   private static final @Nullable Object MESSAGE_TYPE_SYSTEM;
-  private static final @Nullable Object MESSAGE_TYPE_ACTIONBAR;
+  private static final boolean MESSAGE_TYPE_IS_INT;
 
   static {
-    if (CLASS_MESSAGE_TYPE != null && !CLASS_MESSAGE_TYPE.isEnum()) {
-      MESSAGE_TYPE_CHAT = 0;
-      MESSAGE_TYPE_SYSTEM = 1;
-      MESSAGE_TYPE_ACTIONBAR = 2;
+    MESSAGE_TYPE_IS_INT = CLASS_MESSAGE_TYPE != null && !CLASS_MESSAGE_TYPE.isEnum();
+    if (MESSAGE_TYPE_IS_INT) {
+      MESSAGE_TYPE_CHAT = (int) POSITION_CHAT;
+      MESSAGE_TYPE_SYSTEM = (int) POSITION_SYSTEM;
     } else {
-      MESSAGE_TYPE_CHAT = findEnum(CLASS_MESSAGE_TYPE, "CHAT", 0);
-      MESSAGE_TYPE_SYSTEM = findEnum(CLASS_MESSAGE_TYPE, "SYSTEM", 1);
-      MESSAGE_TYPE_ACTIONBAR = findEnum(CLASS_MESSAGE_TYPE, "GAME_INFO", 2);
+      MESSAGE_TYPE_CHAT = findEnum(CLASS_MESSAGE_TYPE, "CHAT", POSITION_CHAT);
+      MESSAGE_TYPE_SYSTEM = findEnum(CLASS_MESSAGE_TYPE, "SYSTEM", POSITION_SYSTEM);
     }
   }
 
   private static final @Nullable MethodHandle LEGACY_CHAT_PACKET_CONSTRUCTOR; // (IChatBaseComponent, byte)
-  private static final @Nullable MethodHandle CHAT_PACKET_CONSTRUCTOR; // (ChatMessageType, IChatBaseComponent, UUID) / (IChatBaseComponent, boolean) -> PacketPlayOutChat
+  private static final @Nullable MethodHandle CHAT_PACKET_CONSTRUCTOR; // normalised to (IChatBaseComponent, ChatMessageType|Integer, UUID) -> PacketPlayOutChat
+  private static final boolean USE_LEGACY_CHAT_PACKET;
 
   static {
     MethodHandle legacyChatPacketConstructor = null;
     MethodHandle chatPacketConstructor = null;
+    boolean chatPacketTypeDropped = false;
 
     try {
       if (CLASS_CHAT_COMPONENT != null) {
@@ -260,35 +265,38 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
           findMcClassName("network.protocol.game.ClientboundChatPacket"),
           findMcClassName("network.protocol.game.ClientboundSystemChatPacket")
         );
-        if (MESSAGE_TYPE_CHAT == Integer.valueOf(0)) {
+        if (MESSAGE_TYPE_IS_INT) {
           // ClientboundSystemChatPacket constructor changed for 1.19.1
           chatPacketConstructor = findConstructor(chatPacketClass, CLASS_CHAT_COMPONENT, boolean.class);
-        }
-        if (chatPacketConstructor == null) {
-          // ClientboundSystemChatPacket constructor changed for 1.19
-          chatPacketConstructor = findConstructor(chatPacketClass, CLASS_CHAT_COMPONENT, int.class);
-        }
-        if (chatPacketConstructor == null) {
+          if (chatPacketConstructor == null) {
+            // ClientboundSystemChatPacket constructor changed for 1.19
+            chatPacketConstructor = findConstructor(chatPacketClass, CLASS_CHAT_COMPONENT, int.class);
+          }
+        } else if (CLASS_MESSAGE_TYPE != null) {
           // ClientboundChatPacket constructor changed for 1.16
+          chatPacketConstructor = findConstructor(chatPacketClass, CLASS_CHAT_COMPONENT, CLASS_MESSAGE_TYPE, UUID.class);
+          if (chatPacketConstructor == null) {
+            // 1.12 carries the message type, but has no sender id
+            chatPacketConstructor = findConstructor(chatPacketClass, CLASS_CHAT_COMPONENT, CLASS_MESSAGE_TYPE);
+          }
+        }
+        if (chatPacketConstructor == null) {
+          // Before 1.12 neither the message type nor the sender id can be carried
           chatPacketConstructor = findConstructor(chatPacketClass, CLASS_CHAT_COMPONENT);
         }
-        if (chatPacketConstructor == null) {
-          if (CLASS_MESSAGE_TYPE != null) {
-            chatPacketConstructor = findConstructor(chatPacketClass, CLASS_CHAT_COMPONENT, CLASS_MESSAGE_TYPE, UUID.class);
-          }
-        } else {
-          if (MESSAGE_TYPE_CHAT == Integer.valueOf(0)) {
-            if (chatPacketConstructor.type().parameterType(1).equals(boolean.class)) {
-              // 1.19.1
-              chatPacketConstructor = insertArguments(chatPacketConstructor, 1, Boolean.FALSE);
-              chatPacketConstructor = dropArguments(chatPacketConstructor, 1, Integer.class, UUID.class);
-            } else {
-              // for 1.19, create a function that drops the last UUID argument while keeping the integer message type argument
-              chatPacketConstructor = dropArguments(chatPacketConstructor, 2, UUID.class);
-            }
-          } else {
-            // Create a function that ignores the message type and sender id arguments to call the underlying one-argument constructor
+        if (chatPacketConstructor != null) {
+          final MethodType type = chatPacketConstructor.type();
+          if (type.parameterCount() == 1) {
+            // Before 1.12, ignore the message type and sender id arguments and carry the position separately
             chatPacketConstructor = dropArguments(chatPacketConstructor, 1, CLASS_MESSAGE_TYPE == null ? Object.class : CLASS_MESSAGE_TYPE, UUID.class);
+            chatPacketTypeDropped = true;
+          } else if (type.parameterType(1).equals(boolean.class)) {
+            // 1.19.1, where the message type became an overlay flag
+            chatPacketConstructor = insertArguments(chatPacketConstructor, 1, Boolean.FALSE);
+            chatPacketConstructor = dropArguments(chatPacketConstructor, 1, Integer.class, UUID.class);
+          } else if (type.parameterCount() == 2) {
+            // 1.12-1.15 and 1.19, drop the sender id while keeping the message type
+            chatPacketConstructor = dropArguments(chatPacketConstructor, 2, UUID.class);
           }
         }
         legacyChatPacketConstructor = findConstructor(chatPacketClass, CLASS_CHAT_COMPONENT, byte.class);
@@ -302,6 +310,7 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
 
     CHAT_PACKET_CONSTRUCTOR = chatPacketConstructor;
     LEGACY_CHAT_PACKET_CONSTRUCTOR = legacyChatPacketConstructor;
+    USE_LEGACY_CHAT_PACKET = chatPacketTypeDropped && legacyChatPacketConstructor != null;
   }
 
   static class Chat1_19_3 extends Chat {
@@ -336,7 +345,7 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
           boundNetwork = CraftBukkitAccess.Chat1_19_3.CHAT_TYPE_BOUND_CONSTRUCTOR.invoke(chatTypeHolder, nameComponent, Optional.ofNullable(targetComponent));
         }
 
-        super.sendMessage(viewer, CraftBukkitAccess.Chat1_19_3.DISGUISED_CHAT_PACKET_CONSTRUCTOR.invoke(message, boundNetwork));
+        this.sendPacket((Player) viewer, CraftBukkitAccess.Chat1_19_3.DISGUISED_CHAT_PACKET_CONSTRUCTOR.invoke(message, boundNetwork));
       } catch (final Throwable error) {
         logError(error, "Failed to send a 1.19.3+ message: %s %s", message, boundChatType);
       }
@@ -348,6 +357,10 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
     }
   }
 
+  private static @Nullable Object messageType(final byte position) {
+    return position == POSITION_CHAT ? MESSAGE_TYPE_CHAT : MESSAGE_TYPE_SYSTEM;
+  }
+
   static class Chat extends PacketFacet<CommandSender> implements Facet.Chat<CommandSender, Object> {
     @Override
     public boolean isSupported() {
@@ -356,24 +369,28 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
 
     @Override
     public void sendMessage(final @NonNull CommandSender viewer, final @Nullable Object message) {
-      if (message != null) this.sendMessage(viewer, message, MESSAGE_TYPE_SYSTEM, Identity.nil().uuid());
+      if (message != null) this.sendMessage(viewer, message, POSITION_SYSTEM, Identity.nil().uuid());
     }
 
     @Override
     public void sendMessage(final @NonNull CommandSender viewer, final @NonNull Object message, final ChatType.@NonNull Bound boundChatType) {
-      this.sendMessage(viewer, message, MESSAGE_TYPE_CHAT, Identity.nil().uuid());
+      this.sendMessage(viewer, message, POSITION_CHAT, Identity.nil().uuid());
     }
 
     @Override
     public void sendMessage(final @NonNull CommandSender viewer, final @NonNull Object message, final @NonNull SignedMessage signedMessage, final ChatType.@NonNull Bound boundChatType) {
-      this.sendMessage(viewer, message, MESSAGE_TYPE_CHAT, signedMessage.identity().uuid());
+      this.sendMessage(viewer, message, POSITION_CHAT, signedMessage.identity().uuid());
     }
 
-    protected void sendMessage(final @NonNull CommandSender viewer, final @NonNull Object message, final @Nullable Object messageType, final @NonNull UUID source) {
+    protected void sendMessage(final @NonNull CommandSender viewer, final @NonNull Object message, final byte position, final @NonNull UUID source) {
       try {
-        super.sendMessage(viewer, CHAT_PACKET_CONSTRUCTOR.invoke(message, messageType, source));
+        if (USE_LEGACY_CHAT_PACKET) {
+          this.sendPacket((Player) viewer, LEGACY_CHAT_PACKET_CONSTRUCTOR.invoke(message, position));
+        } else {
+          this.sendPacket((Player) viewer, CHAT_PACKET_CONSTRUCTOR.invoke(message, messageType(position), source));
+        }
       } catch (final Throwable error) {
-        logError(error, "Failed to invoke PacketPlayOutChat constructor: %s %s", message, String.valueOf(messageType));
+        logError(error, "Failed to invoke PacketPlayOutChat constructor: %s %s", message, position);
       }
     }
   }
@@ -445,7 +462,7 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
       // Due to a Minecraft client bug, Action bars through the chat packet don't properly support formatting
       final TextComponent legacyMessage = Component.text(legacy().serialize(message));
       try {
-        return LEGACY_CHAT_PACKET_CONSTRUCTOR.invoke(super.createMessage(viewer, legacyMessage), (byte) 2);
+        return LEGACY_CHAT_PACKET_CONSTRUCTOR.invoke(super.createMessage(viewer, legacyMessage), POSITION_ACTION_BAR);
       } catch (final Throwable error) {
         logError(error, "Failed to invoke PacketPlayOutChat constructor: %s", legacyMessage);
         return null;
@@ -1380,9 +1397,8 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
     @Deprecated
     @Override
     public void health(final float health) {
-      if (this.entity instanceof Damageable) {
-        final Damageable entity = (Damageable) this.entity;
-        entity.setHealth(health * (entity.getMaxHealth() - 0.1f) + 0.1f);
+      if (this.entity instanceof Damageable damageable) {
+        damageable.setHealth(health * (damageable.getMaxHealth() - 0.1f) + 0.1f);
         this.broadcastPacket(this.createMetadataPacket());
       }
     }

@@ -363,7 +363,7 @@ class BukkitFacet<V extends CommandSender> extends FacetBase<V> {
   static final class ViaHook implements Function<Player, UserConnection> {
     @Override
     public UserConnection apply(final @NonNull Player player) {
-      return Via.getManager().getConnectionManager().getConnectedClient(player.getUniqueId());
+      return Via.getManager().getConnectionManager().getServerConnection(player.getUniqueId());
     }
   }
 

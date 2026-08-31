@@ -53,10 +53,8 @@ dependencyResolutionManagement {
   }
 }
 
-['bungeecord', 'legacy-text3'].each {
-  include "text-serializer-$it"
-  findProject(":text-serializer-$it")?.name = "adventure-text-serializer-$it"
-}
+include 'text-serializer-bungeecord'
+findProject(':text-serializer-bungeecord')?.name = 'adventure-text-serializer-bungeecord'
 
 include 'api'
 findProject(':api')?.name = 'adventure-platform-api'

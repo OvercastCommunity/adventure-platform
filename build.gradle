@@ -8,7 +8,6 @@ plugins {
   id 'net.kyori.indra' version "$indraVersion" apply false
   id 'net.kyori.indra.publishing.sonatype' version "$indraVersion"
   id 'net.kyori.indra.licenser.spotless' version "$indraVersion" apply false
-  id 'net.kyori.indra.crossdoc' version "$indraVersion" apply false
   id 'io.github.gradle-nexus.publish-plugin' version "2.0.0"
 }
 
@@ -33,7 +32,7 @@ class BukkitAnnotationsRule implements ComponentMetadataRule {
     componentMetadataContext.details.withVariant("compile") {
       withDependencies {
         add("com.google.errorprone:error_prone_annotations:2.41.0")
-        add("org.jetbrains:annotations:26.0.2")
+        add("org.jetbrains:annotations:26.1.0")
       }
     }
   }
@@ -44,7 +43,6 @@ subprojects {
   apply plugin: 'net.kyori.indra.publishing'
   apply plugin: 'net.kyori.indra.checkstyle'
   apply plugin: 'net.kyori.indra.licenser.spotless'
-  apply plugin: 'net.kyori.indra.crossdoc'
 
   dependencies {
     components {
@@ -54,6 +52,17 @@ subprojects {
     checkstyle 'ca.stellardrift:stylecheck:0.2.1'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.13.4'
     testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.13.4'
+  }
+
+  tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs.add('-Xlint:-processing')
+  }
+
+  tasks.withType(Javadoc).configureEach {
+    options {
+      links("https://jd.papermc.io/adventure/${rootProject.adventure}")
+      addStringOption('-link-modularity-mismatch', 'info')
+    }
   }
 
   indra {
@@ -95,12 +104,5 @@ subprojects {
         }
       }
     }
-  }
-  
-  indraCrossdoc {
-      baseUrl().set(providers.gradleProperty('javadocPublishRoot'))
-      nameBasedDocumentationUrlProvider {
-          projectNamePrefix = "adventure-platform-"
-      }
   }
 }

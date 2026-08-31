@@ -62,16 +62,10 @@ public final class BukkitComponentSerializer {
   static {
     FLATTENER = FacetComponentFlattener.get(Bukkit.getServer(), TRANSLATORS);
 
-    if (IS_1_13) {
-      GSON_SERIALIZER = GsonComponentSerializer.builder()
-              .options(JSONOptions.byDataVersion().at(Bukkit.getUnsafe().getDataVersion()))
-              .build();
-    } else {
-      GSON_SERIALIZER = GsonComponentSerializer.builder()
-              .legacyHoverEventSerializer(NBTLegacyHoverEventSerializer.get())
-              .options(JSONOptions.byDataVersion().at(0))
-              .build();
-    }
+    GSON_SERIALIZER = GsonComponentSerializer.builder()
+      .legacyHoverEventSerializer(NBTLegacyHoverEventSerializer.get())
+      .options(JSONOptions.byDataVersion().at(IS_1_13 ? Bukkit.getUnsafe().getDataVersion() : 0))
+      .build();
 
     if (IS_1_16) {
       LEGACY_SERIALIZER = LegacyComponentSerializer.builder()

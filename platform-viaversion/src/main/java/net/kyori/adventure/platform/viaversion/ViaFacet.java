@@ -26,15 +26,17 @@ package net.kyori.adventure.platform.viaversion;
 import com.viaversion.viaversion.api.Via;
 import com.viaversion.viaversion.api.connection.UserConnection;
 import com.viaversion.viaversion.api.protocol.Protocol;
+import com.viaversion.viaversion.api.protocol.ProtocolPipeline;
 import com.viaversion.viaversion.api.protocol.packet.ClientboundPacketType;
 import com.viaversion.viaversion.api.protocol.packet.PacketWrapper;
 import com.viaversion.viaversion.api.protocol.packet.State;
 import com.viaversion.viaversion.api.protocol.packet.provider.PacketTypeMap;
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
+import com.viaversion.viaversion.api.rewriter.ComponentRewriter;
 import com.viaversion.viaversion.api.type.Types;
 import com.viaversion.viaversion.libs.gson.JsonElement;
-import com.viaversion.viaversion.libs.gson.JsonObject;
 import com.viaversion.viaversion.libs.gson.JsonParser;
+import java.lang.reflect.Method;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -54,11 +56,11 @@ import net.kyori.adventure.platform.facet.Knob;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.kyori.adventure.text.serializer.json.JSONOptions;
+import net.kyori.adventure.text.serializer.json.legacyimpl.NBTLegacyHoverEventSerializer;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import static net.kyori.adventure.platform.facet.Knob.logError;
-import static net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.colorDownsamplingGson;
 
 // Non-API
 @SuppressWarnings({"checkstyle:FilteringWriteTag", "checkstyle:MissingJavadocType", "checkstyle:MissingJavadocMethod"})
@@ -66,12 +68,16 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
   private static final String PACKAGE = "com.viaversion.viaversion";
   private static final int SUPPORTED_VIA_MAJOR_VERSION = 5;
   private static final boolean SUPPORTED;
-  private static final ProtocolVersion VERSION_TRANSLATION_KEYS = ProtocolVersion.getClosest("1.13");
+  private static final String EMPTY_COMPONENT = "{\"text\":\"\"}";
 
   // The component will go through the ViaVersion pipeline starting from Minecraft 1.16
   private static final int VERSION_1_16 = 2526; // 20w16a
   private static final GsonComponentSerializer GSON_SERIALIZER_1_16 = GsonComponentSerializer.builder()
           .options(JSONOptions.byDataVersion().at(VERSION_1_16))
+          .build();
+  private static final GsonComponentSerializer GSON_SERIALIZER_PRE_1_16 = GsonComponentSerializer.colorDownsamplingGson()
+          .toBuilder()
+          .legacyHoverEventSerializer(NBTLegacyHoverEventSerializer.get())
           .build();
 
   static {
@@ -80,8 +86,7 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
       // Check if the ViaVersion API is present and is a supported major version
       Class.forName(PACKAGE + ".api.ViaAPI").getDeclaredMethod("majorVersion");
       supported = Via.getAPI().majorVersion() == SUPPORTED_VIA_MAJOR_VERSION;
-    } catch (final Throwable error) {
-      // ignore
+    } catch (final Throwable ignored) {
     }
     SUPPORTED = supported && Knob.isEnabled("viaversion", true);
   }
@@ -110,10 +115,14 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
 
   @Override
   public boolean isApplicable(final @NonNull V viewer) {
-    return super.isApplicable(viewer)
-      && this.minProtocol != null
-      && this.minProtocol.newerThan(Via.getAPI().getServerVersion().lowestSupportedProtocolVersion())
-      && this.findProtocol(viewer).newerThanOrEqualTo(this.minProtocol);
+    if (!super.isApplicable(viewer)
+      || this.minProtocol == null
+      || !this.minProtocol.newerThan(Via.getAPI().getServerVersion().lowestSupportedProtocolVersion())) {
+      return false;
+    }
+
+    final ProtocolVersion protocol = this.findProtocol(viewer);
+    return protocol.isKnown() && protocol.newerThanOrEqualTo(this.minProtocol);
   }
 
   public @Nullable UserConnection findConnection(final @NonNull V viewer) {
@@ -121,31 +130,34 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
   }
 
   public ProtocolVersion findProtocol(final @NonNull V viewer) {
-    final UserConnection connection = this.findConnection(viewer);
-    if (connection != null) {
-      return connection.getProtocolInfo().protocolVersion();
-    }
-    return ProtocolVersion.unknown;
+    return protocolOf(this.findConnection(viewer));
+  }
+
+  public static ProtocolVersion protocolOf(final @Nullable UserConnection connection) {
+    return connection == null ? ProtocolVersion.unknown : connection.getProtocolInfo().protocolVersion();
+  }
+
+  public boolean supportsHexColor(final @Nullable UserConnection connection) {
+    final ProtocolVersion protocol = protocolOf(connection);
+    return protocol.isKnown() && protocol.newerThanOrEqualTo(this.hexColorProtocol);
   }
 
   @NonNull
   @Override
   public String createMessage(final @NonNull V viewer, final @NonNull Component message) {
-    final ProtocolVersion protocol = this.findProtocol(viewer);
-    if (protocol.newerThanOrEqualTo(this.hexColorProtocol)) {
-      return GSON_SERIALIZER_1_16.serialize(message);
-    } else {
-      return colorDownsamplingGson().serialize(message);
-    }
+    return this.createMessage(this.findConnection(viewer), message);
+  }
+
+  private @NonNull String createMessage(final @Nullable UserConnection connection, final @NonNull Component message) {
+    return (this.supportsHexColor(connection) ? GSON_SERIALIZER_1_16 : GSON_SERIALIZER_PRE_1_16).serialize(message);
   }
 
   public static class ProtocolBased<V> extends ViaFacet<V> {
     private final Class<? extends Protocol<?, ?, ?, ?>> protocolClass;
     private final ClientboundPacketType packetType;
-    private final boolean rewriteLegacyTranslations;
 
     @SuppressWarnings("unchecked")
-    protected ProtocolBased(final @NonNull String fromProtocol, final @NonNull String toProtocol, final String minProtocol, final @NonNull String packetName, final @NonNull Class<? extends V> viewerClass, final @NonNull Function<V, UserConnection> connectionFunction, final boolean rewriteLegacyTranslations) {
+    protected ProtocolBased(final @NonNull String fromProtocol, final @NonNull String toProtocol, final String minProtocol, final @NonNull String packetName, final @NonNull Class<? extends V> viewerClass, final @NonNull Function<V, UserConnection> connectionFunction) {
       super(viewerClass, connectionFunction, minProtocol);
 
       final String protocolClassName = MessageFormat.format("{0}.protocols.v{1}to{2}.Protocol{1}To{2}", PACKAGE, fromProtocol, toProtocol);
@@ -154,19 +166,21 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
       ClientboundPacketType packetType = null;
       try {
         protocolClass = (Class<? extends Protocol<?, ?, ?, ?>>) Class.forName(protocolClassName);
-        final Protocol<?, ?, ?, ?> protocol = protocolClass.getDeclaredConstructor().newInstance();
+        Protocol<?, ?, ?, ?> protocol = Via.getManager().getProtocolManager().getProtocol(protocolClass);
+        if (protocol == null) {
+          protocol = protocolClass.getDeclaredConstructor().newInstance();
+        }
         final Map<State, ? extends PacketTypeMap<? extends ClientboundPacketType>> packetTypes = protocol.getPacketTypesProvider().mappedClientboundPacketTypes();
         final PacketTypeMap<? extends ClientboundPacketType> playPacketTypes = packetTypes.get(State.PLAY);
         if (playPacketTypes != null) {
           packetType = playPacketTypes.typeByName(packetName);
         }
-      } catch (final Throwable error) {
+      } catch (final Throwable ignored) {
         // No-op, ViaVersion is not loaded
       }
 
       this.protocolClass = protocolClass;
       this.packetType = packetType;
-      this.rewriteLegacyTranslations = rewriteLegacyTranslations;
     }
 
     @Override
@@ -189,63 +203,73 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
       }
     }
 
-    public @NonNull JsonElement parse(final @NonNull String message) {
-      final JsonElement element = JsonParser.parseString(message);
-      if (this.rewriteLegacyTranslations) {
-        TranslationMappings.rewriteLegacyTranslations(element);
-      }
+    protected void writeComponent(final @NonNull PacketWrapper packet, final @Nullable String message) {
+      packet.write(Types.COMPONENT, this.parse(packet.user(), message));
+    }
+
+    public @NonNull JsonElement parse(final @Nullable UserConnection connection, final @Nullable String message) {
+      final JsonElement element = JsonParser.parseString(message == null ? EMPTY_COMPONENT : message);
+      this.rewriteComponent(connection, element);
       return element;
     }
 
-    public @NonNull JsonElement parse(final @NonNull V viewer, final @Nullable String message) {
-      final JsonElement element = JsonParser.parseString(message == null ? GsonComponentSerializer.gson().serialize(Component.empty()) : message);
-      if (this.rewriteLegacyTranslations
-        && VERSION_TRANSLATION_KEYS != null
-        && VERSION_TRANSLATION_KEYS.isKnown()
-        && this.findProtocol(viewer).newerThanOrEqualTo(VERSION_TRANSLATION_KEYS)) {
-        TranslationMappings.rewriteLegacyTranslations(element);
+    private void rewriteComponent(final @Nullable UserConnection connection, final @NonNull JsonElement element) {
+      if (connection == null) return;
+
+      final ProtocolPipeline pipeline = connection.getProtocolInfo().getPipeline();
+      if (!pipeline.contains(this.protocolClass)) return;
+
+      for (final Protocol<?, ?, ?, ?> protocol : pipeline.reversedPipes()) {
+        try {
+          final ComponentRewriter rewriter = protocol.getComponentRewriter();
+          if (rewriter != null) {
+            rewriter.processText(connection, element);
+          }
+
+          Protocol1_12Rewriters.processText(protocol.getClass(), connection, element);
+        } catch (final Throwable error) {
+          logError(error, "Failed to rewrite component for protocol: %s %s", protocol, element);
+        }
+
+        if (protocol.getClass() == this.protocolClass) break;
       }
-      return element;
     }
   }
 
-  private static final class TranslationMappings {
-    private static final String PROTOCOL_1_12_2_TO_1_13 = PACKAGE + ".protocols.v1_12_2to1_13.Protocol1_12_2To1_13";
-    private static final @Nullable Map<String, String> TRANSLATE = mapping("getTranslateMapping");
-    private static final @Nullable Map<String, String> MOJANG_TRANSLATION = mapping("getMojangTranslation");
+  // Most component rewriters are reachable through Protocol#getComponentRewriter(), but Protocol1_11_1To1_12
+  // applies its own from classes outside the API. Look those up reflectively so a component is rewritten by
+  // every protocol we inject past.
+  private static final class Protocol1_12Rewriters {
+    private static final @Nullable Class<?> PROTOCOL = findClass("v1_11_1to1_12.Protocol1_11_1To1_12");
+    // Achievement and statistic keys, which 1.12 replaced with inlined text
+    private static final @Nullable Method TRANSLATE = findMethod("v1_11_1to1_12.data.TranslateRewriter", "toClient", UserConnection.class, JsonElement.class);
+    // Item ids within show_item hover events, which 1.12 moved from legacy NBT to SNBT
+    private static final @Nullable Method CHAT_ITEM = findMethod("v1_11_1to1_12.data.ChatItemRewriter", "toClient", JsonElement.class);
 
-    @SuppressWarnings("unchecked")
-    private static @Nullable Map<String, String> mapping(final @NonNull String method) {
+    private static void processText(final @NonNull Class<?> protocol, final @NonNull UserConnection connection, final @NonNull JsonElement element) throws ReflectiveOperationException {
+      if (protocol != PROTOCOL) return;
+
+      // Applied in the order Protocol1_11_1To1_12 itself applies them to chat
+      if (TRANSLATE != null) TRANSLATE.invoke(null, connection, element);
+      if (CHAT_ITEM != null) CHAT_ITEM.invoke(null, element);
+    }
+
+    private static @Nullable Class<?> findClass(final @NonNull String name) {
       try {
-        final Class<?> protocol = Class.forName(PROTOCOL_1_12_2_TO_1_13);
-        final Object mappings = protocol.getField("MAPPINGS").get(null);
-        return (Map<String, String>) mappings.getClass().getMethod(method).invoke(mappings);
-      } catch (final Throwable error) {
+        return Class.forName(PACKAGE + ".protocols." + name);
+      } catch (final Throwable ignored) {
         return null;
       }
     }
 
-    private static void rewriteLegacyTranslations(final @Nullable JsonElement element) {
-      if (element != null && element.isJsonArray()) {
-        for (final JsonElement child : element.getAsJsonArray()) {
-          rewriteLegacyTranslations(child);
-        }
-      } else if (element != null && element.isJsonObject()) {
-        final JsonObject object = element.getAsJsonObject();
-        final JsonElement translate = object.get("translate");
-        if (translate != null && translate.isJsonPrimitive()) {
-          final String value = translate.getAsString();
-          String mapped = TRANSLATE == null ? null : TRANSLATE.get(value);
-          if (mapped == null && MOJANG_TRANSLATION != null) {
-            mapped = MOJANG_TRANSLATION.get(value);
-          }
-          if (mapped != null) {
-            object.addProperty("translate", mapped);
-          }
-        }
-        for (final Map.Entry<String, JsonElement> entry : object.entrySet()) {
-          rewriteLegacyTranslations(entry.getValue());
-        }
+    private static @Nullable Method findMethod(final @NonNull String className, final @NonNull String methodName, final Class<?>... parameters) {
+      final Class<?> owner = findClass(className);
+      if (owner == null) return null;
+
+      try {
+        return owner.getMethod(methodName, parameters);
+      } catch (final Throwable ignored) {
+        return null;
       }
     }
   }
@@ -256,7 +280,7 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
     protected static final byte TYPE_ACTION_BAR = 2;
 
     public Chat(final @NonNull Class<? extends V> viewerClass, final @NonNull Function<V, UserConnection> connectionFunction) {
-      super("1_15_2", "1_16", VERSION_HEX_COLOR, "CHAT", viewerClass, connectionFunction, true);
+      super("1_15_2", "1_16", VERSION_HEX_COLOR, "CHAT", viewerClass, connectionFunction);
     }
 
     @Override
@@ -276,7 +300,7 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
 
     protected void sendMessage(final @NonNull V viewer, final @NonNull String message, final byte type, final @NonNull UUID source) {
       final PacketWrapper packet = this.createPacket(viewer);
-      packet.write(Types.COMPONENT, this.parse(viewer, message));
+      this.writeComponent(packet, message);
       packet.write(Types.BYTE, type);
       packet.write(Types.UUID, source);
       this.sendPacket(packet);
@@ -285,13 +309,13 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
 
   public static class ActionBar<V> extends ProtocolBased<V> implements Facet.ActionBar<V, String> {
     public ActionBar(final @NonNull Class<? extends V> viewerClass, final @NonNull Function<V, UserConnection> connectionFunction) {
-      super("1_15_2", "1_16", VERSION_HEX_COLOR, "CHAT", viewerClass, connectionFunction, true);
+      super("1_15_2", "1_16", VERSION_HEX_COLOR, "CHAT", viewerClass, connectionFunction);
     }
 
     @Override
     public void sendMessage(final @NonNull V viewer, final @NonNull String message) {
       final PacketWrapper packet = this.createPacket(viewer);
-      packet.write(Types.COMPONENT, this.parse(viewer, message));
+      this.writeComponent(packet, message);
       packet.write(Types.BYTE, ViaFacet.Chat.TYPE_ACTION_BAR);
       packet.write(Types.UUID, Identity.nil().uuid());
       this.sendPacket(packet);
@@ -300,21 +324,21 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
 
   public static class ActionBarTitle<V> extends ProtocolBased<V> implements Facet.ActionBar<V, String> {
     public ActionBarTitle(final @NonNull Class<? extends V> viewerClass, final @NonNull Function<V, UserConnection> connectionFunction) {
-      super("1_10", "1_11", TitlePacket.VERSION_ACTION_BAR, "SET_TITLES", viewerClass, connectionFunction, true);
+      super("1_10", "1_11", TitlePacket.VERSION_ACTION_BAR, "SET_TITLES", viewerClass, connectionFunction);
     }
 
     @Override
     public void sendMessage(final @NonNull V viewer, final @NonNull String message) {
       final PacketWrapper packet = this.createPacket(viewer);
       packet.write(Types.VAR_INT, TitlePacket.ACTION_ACTIONBAR);
-      packet.write(Types.COMPONENT, this.parse(viewer, message));
+      this.writeComponent(packet, message);
       this.sendPacket(packet);
     }
   }
 
   public static class Title<V> extends ProtocolBased<V> implements Facet.TitlePacket<V, String, List<Consumer<PacketWrapper>>, Consumer<V>> {
     protected Title(final @NonNull String fromProtocol, final @NonNull String toProtocol, final String minProtocol, final @NonNull Class<? extends V> viewerClass, final @NonNull Function<V, UserConnection> connectionFunction) {
-      super(fromProtocol, toProtocol, minProtocol, "SET_TITLES", viewerClass, connectionFunction, true);
+      super(fromProtocol, toProtocol, minProtocol, "SET_TITLES", viewerClass, connectionFunction);
     }
 
     public Title(final @NonNull Class<? extends V> viewerClass, final @NonNull Function<V, UserConnection> connectionFunction) {
@@ -330,7 +354,7 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
     public void contributeTitle(final @NonNull List<Consumer<PacketWrapper>> coll, final @NonNull String title) {
       coll.add(packet -> {
         packet.write(Types.VAR_INT, ACTION_TITLE);
-        packet.write(Types.COMPONENT, this.parse(title));
+        this.writeComponent(packet, title);
       });
     }
 
@@ -338,7 +362,7 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
     public void contributeSubtitle(final @NonNull List<Consumer<PacketWrapper>> coll, final @NonNull String subtitle) {
       coll.add(packet -> {
         packet.write(Types.VAR_INT, ACTION_SUBTITLE);
-        packet.write(Types.COMPONENT, this.parse(subtitle));
+        this.writeComponent(packet, subtitle);
       });
     }
 
@@ -386,14 +410,16 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
   public static final class BossBar<V> extends ProtocolBased<V> implements Facet.BossBarPacket<V> {
     private final Set<V> viewers;
     private UUID id;
-    private String title;
+    private Component title = Component.empty();
+    private @Nullable String hexColorTitle;
+    private @Nullable String downsampledTitle;
     private float health;
     private int color;
     private int overlay;
     private byte flags;
 
     private BossBar(final @NonNull String fromProtocol, final @NonNull String toProtocol, final @NonNull Class<? extends V> viewerClass, final @NonNull Function<V, UserConnection> connectionFunction, final Collection<V> viewers) {
-      super(fromProtocol, toProtocol, VERSION_BOSS_BAR, "BOSS_EVENT", viewerClass, connectionFunction, true);
+      super(fromProtocol, toProtocol, VERSION_BOSS_BAR, "BOSS_EVENT", viewerClass, connectionFunction);
       this.viewers = new CopyOnWriteArraySet<>(viewers);
     }
 
@@ -428,10 +454,19 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
 
     @Override
     public void bossBarNameChanged(final net.kyori.adventure.bossbar.@NonNull BossBar bar, final @NonNull Component oldName, final @NonNull Component newName) {
-      if (!this.viewers.isEmpty()) {
-        this.title = this.createMessage(this.viewers.iterator().next(), newName);
-        this.broadcastPacket(ACTION_TITLE);
+      this.title = newName;
+      this.hexColorTitle = null;
+      this.downsampledTitle = null;
+      this.broadcastPacket(ACTION_TITLE);
+    }
+
+    private @NonNull String createTitle(final @Nullable UserConnection connection) {
+      if (this.supportsHexColor(connection)) {
+        if (this.hexColorTitle == null) this.hexColorTitle = GSON_SERIALIZER_1_16.serialize(this.title);
+        return this.hexColorTitle;
       }
+      if (this.downsampledTitle == null) this.downsampledTitle = GSON_SERIALIZER_PRE_1_16.serialize(this.title);
+      return this.downsampledTitle;
     }
 
     @Override
@@ -463,7 +498,7 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
       packet.write(Types.UUID, this.id);
       packet.write(Types.VAR_INT, action);
       if (action == ACTION_ADD || action == ACTION_TITLE) {
-        packet.write(Types.COMPONENT, this.parse(viewer, this.title));
+        this.writeComponent(packet, this.createTitle(packet.user()));
       }
       if (action == ACTION_ADD || action == ACTION_HEALTH) {
         packet.write(Types.FLOAT, this.health);
@@ -514,14 +549,14 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
   public static final class TabList<V> extends ProtocolBased<V> implements Facet.TabList<V, String> {
 
     public TabList(final @NonNull Class<? extends V> viewerClass, final @NonNull Function<V, UserConnection> userConnection) {
-      super("1_15_2", "1_16", VERSION_HEX_COLOR, "TAB_LIST", viewerClass, userConnection, true);
+      super("1_15_2", "1_16", VERSION_HEX_COLOR, "TAB_LIST", viewerClass, userConnection);
     }
 
     @Override
     public void send(final V viewer, final @Nullable String header, final @Nullable String footer) {
       final PacketWrapper packet = this.createPacket(viewer);
-      packet.write(Types.COMPONENT, this.parse(viewer, header));
-      packet.write(Types.COMPONENT, this.parse(viewer, footer));
+      this.writeComponent(packet, header);
+      this.writeComponent(packet, footer);
       this.sendPacket(packet);
     }
   }

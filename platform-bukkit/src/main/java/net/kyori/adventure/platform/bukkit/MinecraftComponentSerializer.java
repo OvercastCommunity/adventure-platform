@@ -165,7 +165,7 @@ public final class MinecraftComponentSerializer implements ComponentSerializer<C
     final Object registryAccess = GET_REGISTRY != null ? GET_REGISTRY.invoke() : null;
     state.registryAccessInstance = registryAccess;
 
-    final @Nullable Class<?> chatSerializerClass = findChatSerializerClass(chatComponentClass);
+    final Class<?> chatSerializerClass = findChatSerializerClass(chatComponentClass);
     state.gson = findGson(chatSerializerClass);
     initializeSerializerMethods(state, chatComponentClass, registryAccess, chatSerializerClass);
     state.createContext = findSerializationContext(registryAccess);

@@ -42,12 +42,9 @@ import static java.util.Objects.requireNonNull;
  */
 public final class SpongeComponentSerializer implements ComponentSerializer<Component, Component, Text> {
   private static final SpongeComponentSerializer INSTANCE = new SpongeComponentSerializer();
-  private static final GsonComponentSerializer LEGACY_GSON_SERIALIZER = GsonComponentSerializer.builder()
-    .options(JSONOptions.schema().stateBuilder()
-      .value(JSONOptions.EMIT_RGB, false)
-      .value(JSONOptions.EMIT_HOVER_EVENT_TYPE, JSONOptions.HoverEventValueMode.ALL)
-      .value(JSONOptions.EMIT_CLICK_EVENT_TYPE, JSONOptions.ClickEventValueMode.CAMEL_CASE)
-      .build())
+  private static final GsonComponentSerializer LEGACY_GSON_SERIALIZER = GsonComponentSerializer.colorDownsamplingGson()
+    .toBuilder()
+    .editOptions(options -> options.value(JSONOptions.EMIT_HOVER_EVENT_TYPE, JSONOptions.HoverEventValueMode.ALL))
     .legacyHoverEventSerializer(NBTLegacyHoverEventSerializer.get())
     .build();
 
